@@ -18,7 +18,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   default_margin_pct: 30,
 });
 
-const TABS = ['calculator', 'recipes', 'ingredients', 'packaging', 'settings'];
+const TABS = ['ingredients', 'recipes', 'packaging', 'calculator', 'settings'];
 
 /* =========================================================
    Helpers
