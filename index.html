@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bake Costs</title>
+  <meta name="description" content="Work out what a batch of baking costs and what to charge per unit.">
+
+  <!-- Home Screen web app -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Bake Costs">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#f8f3ed" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1b1714" media="(prefers-color-scheme: dark)">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand"><img src="icons/icon-192.png" alt="" width="28" height="28">Bake Costs</div>
+      <nav class="tabs" aria-label="Sections">
+        <a href="#calculator" data-tab="calculator">Calculator</a>
+        <a href="#recipes" data-tab="recipes">Recipes</a>
+        <a href="#ingredients" data-tab="ingredients">Ingredients</a>
+        <a href="#packaging" data-tab="packaging">Packaging</a>
+        <a href="#settings" data-tab="settings">Settings</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="view">
+    <noscript><p>This calculator needs JavaScript turned on.</p></noscript>
+  </main>
+
+  <dialog id="modal"></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <input type="file" id="import-file" accept=".json,application/json" hidden>
+</body>
+</html>

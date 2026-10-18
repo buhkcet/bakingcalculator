@@ -1,0 +1,6 @@
+# Exported backups contain your prices and recipes; keep them off the public site.
+baking-data-*.json
+
+# Local tooling
+.claude/
+.DS_Store
