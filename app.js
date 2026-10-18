@@ -84,6 +84,27 @@ function options(list, selectedId) {
   return list.map((o) => `<option value="${esc(o.id)}"${o.id === selectedId ? ' selected' : ''}>${esc(o.name)}</option>`).join('');
 }
 
+/** A ⋯ button with a dropdown of Edit / Duplicate / Delete for one item. `prefix` picks the actions, e.g. 'ing' → ing-edit. */
+function optionsMenu(prefix, item) {
+  const id = esc(item.id);
+  return `
+    <div class="menu-wrap">
+      <button class="icon-btn menu-btn" data-action="menu-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Options for ${esc(item.name)}">⋯</button>
+      <div class="menu" role="menu" hidden>
+        <button role="menuitem" data-action="${prefix}-edit" data-id="${id}">Edit</button>
+        <button role="menuitem" data-action="${prefix}-duplicate" data-id="${id}">Duplicate</button>
+        <button role="menuitem" class="danger" data-action="${prefix}-delete" data-id="${id}">Delete</button>
+      </div>
+    </div>`;
+}
+
+/** First free "<name> copy", "<name> copy 2", … among `list`. */
+function copyName(name, list) {
+  let suggestion = `${name} copy`;
+  for (let n = 2; list.some((x) => sameName(x.name, suggestion)); n++) suggestion = `${name} copy ${n}`;
+  return suggestion;
+}
+
 function emptyState(title, text, actionHTML = '') {
   return `<div class="card empty"><h2>${esc(title)}</h2><p>${esc(text)}</p>${actionHTML}</div>`;
 }
@@ -410,15 +431,12 @@ function renderIngredients(view) {
           <thead><tr><th>Name</th><th class="num">Pack</th><th class="num">Pack price</th><th class="num">Cost</th><th></th></tr></thead>
           <tbody>
             ${list.map((i) => `
-              <tr>
+              <tr class="tap-row" data-action="ing-edit" data-id="${esc(i.id)}">
                 <td class="name">${esc(i.name)}</td>
                 <td class="num">${qty(i.pack_qty)} ${unitLabel(i.unit)}</td>
                 <td class="num">${money(i.pack_price)}</td>
                 <td class="num">${unitCostLabel(i)}</td>
-                <td><div class="row-actions">
-                  <button class="btn btn-small" data-action="ing-edit" data-id="${esc(i.id)}">Edit</button>
-                  <button class="btn btn-small btn-ghost-danger" data-action="ing-delete" data-id="${esc(i.id)}">Delete</button>
-                </div></td>
+                <td class="menu-cell">${optionsMenu('ing', i)}</td>
               </tr>`).join('')}
           </tbody>
         </table>
@@ -481,6 +499,32 @@ function editIngredient(id) {
   });
 }
 
+function duplicateIngredient(id) {
+  const ing = findIngredient(id);
+  if (!ing) return;
+  openModal({
+    title: `Duplicate ${ing.name}?`,
+    okLabel: 'Duplicate',
+    body: `
+      <p>This makes a separate ingredient with the same unit, pack size and price. You can then edit it, for example for a different brand.</p>
+      <label class="field"><span>Name for the copy</span>
+        <input name="name" value="${esc(copyName(ing.name, activeIngredients()))}" autocomplete="off" autocapitalize="words"></label>`,
+    onOpen: (form) => setTimeout(() => form.elements.namedItem('name').select(), 0),
+    onOk: (form) => {
+      const name = fieldValue(form, 'name').trim();
+      if (!name) return 'Enter a name for the copy.';
+      if (activeIngredients().some((o) => sameName(o.name, name))) return `There's already an ingredient called “${name}”.`;
+      data.ingredients.push({
+        id: newId(), name, unit: ing.unit, pack_qty: ing.pack_qty, pack_price: ing.pack_price, deleted: false,
+      });
+      saveData();
+      render();
+      toast(`Created ${name}`);
+      return '';
+    },
+  });
+}
+
 async function deleteIngredient(id) {
   const ing = findIngredient(id);
   if (!ing) return;
@@ -515,13 +559,10 @@ function renderPackaging(view) {
           <thead><tr><th>Name</th><th class="num">Price each</th><th></th></tr></thead>
           <tbody>
             ${list.map((p) => `
-              <tr>
+              <tr class="tap-row" data-action="pkg-edit" data-id="${esc(p.id)}">
                 <td><div class="name">${esc(p.name)}</div>${p.description ? `<div class="desc">${esc(p.description)}</div>` : ''}</td>
                 <td class="num">${money(p.price)}</td>
-                <td><div class="row-actions">
-                  <button class="btn btn-small" data-action="pkg-edit" data-id="${esc(p.id)}">Edit</button>
-                  <button class="btn btn-small btn-ghost-danger" data-action="pkg-delete" data-id="${esc(p.id)}">Delete</button>
-                </div></td>
+                <td class="menu-cell">${optionsMenu('pkg', p)}</td>
               </tr>`).join('')}
           </tbody>
         </table>
@@ -559,6 +600,30 @@ function editPackaging(id) {
       saveData();
       render();
       toast(item ? 'Packaging updated' : 'Packaging added');
+      return '';
+    },
+  });
+}
+
+function duplicatePackaging(id) {
+  const item = findPackaging(id);
+  if (!item) return;
+  openModal({
+    title: `Duplicate ${item.name}?`,
+    okLabel: 'Duplicate',
+    body: `
+      <p>This makes a separate packaging item with the same description and price. You can then edit it.</p>
+      <label class="field"><span>Name for the copy</span>
+        <input name="name" value="${esc(copyName(item.name, activePackaging()))}" autocomplete="off" autocapitalize="words"></label>`,
+    onOpen: (form) => setTimeout(() => form.elements.namedItem('name').select(), 0),
+    onOk: (form) => {
+      const name = fieldValue(form, 'name').trim();
+      if (!name) return 'Enter a name for the copy.';
+      if (activePackaging().some((o) => sameName(o.name, name))) return `There's already packaging called “${name}”.`;
+      data.packaging.push({ id: newId(), name, description: item.description, price: item.price, deleted: false });
+      saveData();
+      render();
+      toast(`Created ${name}`);
       return '';
     },
   });
@@ -624,21 +689,14 @@ function renderRecipeList(view) {
         ${recipes.map((r) => {
           const c = ingredientCost(r);
           return `
-            <article class="card recipe-card${c.missing.length ? ' has-missing' : ''}">
+            <article class="card recipe-card tap-row${c.missing.length ? ' has-missing' : ''}" data-action="recipe-edit" data-id="${esc(r.id)}">
               <div class="recipe-head">
                 <div>
                   <h2>${esc(r.name)}</h2>
                   <p class="muted">Makes ${qty(r.yield_units)} · ${plural(r.ingredients.length, 'ingredient')}</p>
                   ${c.missing.length ? `<p class="warn-text">⚠ Missing: ${c.missing.map(esc).join(', ')}</p>` : ''}
                 </div>
-                <div class="menu-wrap">
-                  <button class="icon-btn menu-btn" data-action="menu-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Options for ${esc(r.name)}">⋯</button>
-                  <div class="menu" role="menu" hidden>
-                    <button role="menuitem" data-action="recipe-edit" data-id="${esc(r.id)}">Edit</button>
-                    <button role="menuitem" data-action="recipe-duplicate" data-id="${esc(r.id)}">Duplicate</button>
-                    <button role="menuitem" class="danger" data-action="recipe-delete" data-id="${esc(r.id)}">Delete</button>
-                  </div>
-                </div>
+                ${optionsMenu('recipe', r)}
               </div>
               <div class="recipe-cost">
                 <strong>${money(c.total)}</strong>
@@ -804,9 +862,7 @@ async function cancelDraft() {
 function duplicateRecipe(id) {
   const r = findRecipe(id);
   if (!r) return;
-  // Suggest "<name> copy", or "<name> copy 2" and so on if that's taken.
-  let suggestion = `${r.name} copy`;
-  for (let n = 2; data.recipes.some((x) => sameName(x.name, suggestion)); n++) suggestion = `${r.name} copy ${n}`;
+  const suggestion = copyName(r.name, data.recipes);
   openModal({
     title: `Duplicate ${r.name}?`,
     okLabel: 'Duplicate',
@@ -1171,9 +1227,11 @@ function render() {
 const ACTIONS = {
   'ing-add': () => editIngredient(null),
   'ing-edit': (el) => editIngredient(el.dataset.id),
+  'ing-duplicate': (el) => duplicateIngredient(el.dataset.id),
   'ing-delete': (el) => deleteIngredient(el.dataset.id),
   'pkg-add': () => editPackaging(null),
   'pkg-edit': (el) => editPackaging(el.dataset.id),
+  'pkg-duplicate': (el) => duplicatePackaging(el.dataset.id),
   'pkg-delete': (el) => deletePackaging(el.dataset.id),
   'recipe-new': () => startRecipeDraft(null),
   'recipe-edit': (el) => startRecipeDraft(el.dataset.id),
@@ -1183,9 +1241,15 @@ const ACTIONS = {
     const menu = el.nextElementSibling;
     const opening = menu.hidden;
     closeMenus();
-    menu.hidden = !opening;
-    el.setAttribute('aria-expanded', String(opening));
-    if (opening) menu.querySelector('button').focus();
+    if (!opening) return;
+    menu.hidden = false;
+    el.setAttribute('aria-expanded', 'true');
+    // Fixed position so table/card edges can't clip it; open upward if there's no room below.
+    const r = el.getBoundingClientRect();
+    const fitsBelow = r.bottom + 4 + menu.offsetHeight <= window.innerHeight - 8;
+    menu.style.top = `${fitsBelow ? r.bottom + 4 : Math.max(8, r.top - 4 - menu.offsetHeight)}px`;
+    menu.style.left = `${Math.max(8, r.right - menu.offsetWidth)}px`;
+    menu.querySelector('button').focus({ preventScroll: true });
   },
   'recipe-save': () => saveDraft(),
   'recipe-cancel': () => cancelDraft(),
@@ -1236,7 +1300,14 @@ function closeMenus() {
 }
 
 function onViewClick(e) {
-  const el = e.target.closest('[data-action]');
+  // While a ⋯ menu is open, a tap outside it only closes it.
+  if ($('.menu:not([hidden])') && !e.target.closest('.menu-wrap')) {
+    closeMenus();
+    return;
+  }
+  let el = e.target.closest('[data-action]');
+  // A tap near (not on) the ⋯ button shouldn't fall through to the row's tap-to-edit.
+  if (el && el.classList.contains('tap-row') && e.target.closest('.menu-wrap')) el = null;
   if (!el) return;
   const action = ACTIONS[el.dataset.action];
   if (!action) return;
@@ -1290,6 +1361,9 @@ function init() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeMenus();
   });
+  // Menus are fixed-position, so close them rather than let them drift.
+  window.addEventListener('scroll', closeMenus, { passive: true });
+  window.addEventListener('resize', closeMenus);
   window.addEventListener('hashchange', () => {
     render();
     window.scrollTo(0, 0);
