@@ -1157,14 +1157,14 @@ function currentTab() {
 
 function render() {
   const tab = currentTab();
-  $$('.tabs a').forEach((a) => {
+  $$('.app-header [data-tab]').forEach((a) => {
     const active = a.dataset.tab === tab;
     a.classList.toggle('active', active);
     if (active) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
-  // Gentle backup nudge on the Settings tab.
-  $('.tabs a[data-tab="settings"]').classList.toggle('attention', hasAnyData() && lastExportInfo().stale);
+  // Gentle backup nudge on the Settings gear.
+  $('.settings-link').classList.toggle('attention', hasAnyData() && lastExportInfo().stale);
   VIEWS[tab]($('#view'));
 }
 
