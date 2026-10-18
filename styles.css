@@ -320,6 +320,39 @@ table.list .desc { color: var(--muted); font-size: 15px; }
 .recipe-cost strong { font-size: 22px; font-variant-numeric: tabular-nums; }
 .recipe-card .row-actions { margin-top: auto; justify-content: flex-start; }
 
+.recipe-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.menu-wrap { position: relative; flex: none; margin: -8px -10px 0 0; }
+.menu-btn { font-size: 26px; line-height: 1; color: var(--text); }
+.menu-btn[aria-expanded="true"] { background: var(--surface-2); }
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  min-width: 180px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .18);
+}
+.menu button {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.menu button:active, .menu button:focus-visible { background: var(--surface-2); outline: none; }
+.menu button.danger { color: var(--danger); }
+
 .warn-text { color: var(--warn-ink); font-weight: 600; }
 .neg-text { color: var(--danger); font-weight: 600; }
 

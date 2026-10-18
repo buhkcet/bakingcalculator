@@ -625,19 +625,26 @@ function renderRecipeList(view) {
           const c = ingredientCost(r);
           return `
             <article class="card recipe-card${c.missing.length ? ' has-missing' : ''}">
-              <div>
-                <h2>${esc(r.name)}</h2>
-                <p class="muted">Makes ${qty(r.yield_units)} · ${plural(r.ingredients.length, 'ingredient')}</p>
-                ${c.missing.length ? `<p class="warn-text">⚠ Missing: ${c.missing.map(esc).join(', ')}</p>` : ''}
+              <div class="recipe-head">
+                <div>
+                  <h2>${esc(r.name)}</h2>
+                  <p class="muted">Makes ${qty(r.yield_units)} · ${plural(r.ingredients.length, 'ingredient')}</p>
+                  ${c.missing.length ? `<p class="warn-text">⚠ Missing: ${c.missing.map(esc).join(', ')}</p>` : ''}
+                </div>
+                <div class="menu-wrap">
+                  <button class="icon-btn menu-btn" data-action="menu-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Options for ${esc(r.name)}">⋯</button>
+                  <div class="menu" role="menu" hidden>
+                    <button role="menuitem" data-action="recipe-edit" data-id="${esc(r.id)}">Edit</button>
+                    <button role="menuitem" data-action="recipe-duplicate" data-id="${esc(r.id)}">Duplicate</button>
+                    <button role="menuitem" class="danger" data-action="recipe-delete" data-id="${esc(r.id)}">Delete</button>
+                  </div>
+                </div>
               </div>
               <div class="recipe-cost">
                 <strong>${money(c.total)}</strong>
                 <span class="muted">ingredients per batch · ${money(c.total / r.yield_units)} per unit${c.missing.length ? ' (incomplete)' : ''}</span>
               </div>
-              <div class="row-actions">
-                <button class="btn btn-small${c.missing.length ? ' btn-primary' : ''}" data-action="recipe-edit" data-id="${esc(r.id)}">${c.missing.length ? 'Fix' : 'Edit'}</button>
-                <button class="btn btn-small btn-ghost-danger" data-action="recipe-delete" data-id="${esc(r.id)}">Delete</button>
-              </div>
+              ${c.missing.length ? `<div class="row-actions"><button class="btn btn-small btn-primary" data-action="recipe-edit" data-id="${esc(r.id)}">Fix missing ingredients</button></div>` : ''}
             </article>`;
         }).join('')}
       </div>`
@@ -792,6 +799,38 @@ async function cancelDraft() {
   }
   draft = null;
   render();
+}
+
+function duplicateRecipe(id) {
+  const r = findRecipe(id);
+  if (!r) return;
+  // Suggest "<name> copy", or "<name> copy 2" and so on if that's taken.
+  let suggestion = `${r.name} copy`;
+  for (let n = 2; data.recipes.some((x) => sameName(x.name, suggestion)); n++) suggestion = `${r.name} copy ${n}`;
+  openModal({
+    title: `Duplicate ${r.name}?`,
+    okLabel: 'Duplicate',
+    body: `
+      <p>This makes a separate copy with the same ingredients and yield. Changes to one won't affect the other.</p>
+      <label class="field"><span>Name for the copy</span>
+        <input name="name" value="${esc(suggestion)}" autocomplete="off" autocapitalize="words"></label>`,
+    onOpen: (form) => setTimeout(() => form.elements.namedItem('name').select(), 0),
+    onOk: (form) => {
+      const name = fieldValue(form, 'name').trim();
+      if (!name) return 'Enter a name for the copy.';
+      if (data.recipes.some((x) => sameName(x.name, name))) return `There's already a recipe called “${name}”.`;
+      data.recipes.push({
+        id: newId(),
+        name,
+        yield_units: r.yield_units,
+        ingredients: r.ingredients.map((l) => ({ ingredient_id: l.ingredient_id, amount: l.amount })),
+      });
+      saveData();
+      render();
+      toast(`Created ${name}`);
+      return '';
+    },
+  });
 }
 
 async function deleteRecipe(id) {
@@ -1138,7 +1177,16 @@ const ACTIONS = {
   'pkg-delete': (el) => deletePackaging(el.dataset.id),
   'recipe-new': () => startRecipeDraft(null),
   'recipe-edit': (el) => startRecipeDraft(el.dataset.id),
+  'recipe-duplicate': (el) => duplicateRecipe(el.dataset.id),
   'recipe-delete': (el) => deleteRecipe(el.dataset.id),
+  'menu-toggle': (el) => {
+    const menu = el.nextElementSibling;
+    const opening = menu.hidden;
+    closeMenus();
+    menu.hidden = !opening;
+    el.setAttribute('aria-expanded', String(opening));
+    if (opening) menu.querySelector('button').focus();
+  },
   'recipe-save': () => saveDraft(),
   'recipe-cancel': () => cancelDraft(),
   'line-add': () => {
@@ -1180,12 +1228,20 @@ const ACTIONS = {
   import: () => $('#import-file').click(),
 };
 
+function closeMenus() {
+  $$('.menu:not([hidden])').forEach((menu) => {
+    menu.hidden = true;
+    menu.previousElementSibling.setAttribute('aria-expanded', 'false');
+  });
+}
+
 function onViewClick(e) {
   const el = e.target.closest('[data-action]');
   if (!el) return;
   const action = ACTIONS[el.dataset.action];
   if (!action) return;
   e.preventDefault();
+  if (el.dataset.action !== 'menu-toggle') closeMenus();
   action(el);
 }
 
@@ -1227,6 +1283,13 @@ function init() {
   view.addEventListener('click', onViewClick);
   view.addEventListener('input', onViewInput);
   view.addEventListener('change', onViewInput);
+  // Close an open ⋯ menu on a tap outside it, or on Escape.
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.menu-wrap')) closeMenus();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMenus();
+  });
   window.addEventListener('hashchange', () => {
     render();
     window.scrollTo(0, 0);
