@@ -84,16 +84,14 @@ function options(list, selectedId) {
   return list.map((o) => `<option value="${esc(o.id)}"${o.id === selectedId ? ' selected' : ''}>${esc(o.name)}</option>`).join('');
 }
 
-/** A ⋯ button with a dropdown of Edit / Duplicate / Delete for one item. `prefix` picks the actions, e.g. 'ing' → ing-edit. */
-function optionsMenu(prefix, item) {
-  const id = esc(item.id);
+/** A ⋯ button with a dropdown of item actions. `prefix` picks the actions, e.g. 'ing' → ing-edit, ing-delete. */
+function optionsMenu(prefix, item, kinds = ['edit', 'duplicate', 'delete']) {
+  const labels = { edit: 'Edit', duplicate: 'Duplicate', delete: 'Delete' };
   return `
     <div class="menu-wrap">
       <button class="icon-btn menu-btn" data-action="menu-toggle" aria-haspopup="menu" aria-expanded="false" aria-label="Options for ${esc(item.name)}">⋯</button>
       <div class="menu" role="menu" hidden>
-        <button role="menuitem" data-action="${prefix}-edit" data-id="${id}">Edit</button>
-        <button role="menuitem" data-action="${prefix}-duplicate" data-id="${id}">Duplicate</button>
-        <button role="menuitem" class="danger" data-action="${prefix}-delete" data-id="${id}">Delete</button>
+        ${kinds.map((k) => `<button role="menuitem"${k === 'delete' ? ' class="danger"' : ''} data-action="${prefix}-${k}" data-id="${esc(item.id)}">${labels[k]}</button>`).join('')}
       </div>
     </div>`;
 }
@@ -354,6 +352,7 @@ async function importFile(file) {
   data = obj;
   if (!saveData()) return;
   draft = null;
+  Object.assign(recipeUI, { selectedId: null, detailOpen: false });
   resetCalc();
   render();
   toast('Data imported');
@@ -649,12 +648,54 @@ async function deletePackaging(id) {
    Recipes
    ========================================================= */
 
+/*
+ * The Recipes tab is a split view: a list on the left, the selected recipe on the right.
+ * The right side shows the recipe read-only until you tap Edit; editing happens in place.
+ * On narrow screens only one side shows at a time, with a Back button.
+ */
+const recipeUI = { selectedId: null, detailOpen: false };
+
 /** The recipe being edited, as text fields: { id, isNew, name, yieldText, lines: [{ ingredient_id, amountText }], snapshot } */
 let draft = null;
 
 const draftSnapshot = (d) => JSON.stringify([d.name, d.yieldText, d.lines]);
+const draftIsDirty = () => draft && draftSnapshot(draft) !== draft.snapshot;
 
-function startRecipeDraft(id) {
+/** If there are unsaved recipe edits, ask before throwing them away. Resolves true when it's OK to move on. */
+async function confirmLeaveDraft() {
+  if (draftIsDirty()) {
+    const ok = await openModal({
+      title: 'Discard changes?',
+      body: `<p>Your changes to ${draft.isNew ? 'this new recipe' : `<strong>${esc(draft.name || 'this recipe')}</strong>`} haven't been saved.</p>`,
+      okLabel: 'Discard',
+      cancelLabel: 'Keep editing',
+      danger: true,
+    });
+    if (!ok) return false;
+  }
+  draft = null;
+  return true;
+}
+
+function showRecipesTab() {
+  if (location.hash !== '#recipes') location.hash = 'recipes';
+  else render();
+  // Bring the detail into view if the page was scrolled down the list.
+  const detail = $('.split-detail');
+  if (!detail || detail.getBoundingClientRect().top < 0 || recipeUI.detailOpen) window.scrollTo(0, 0);
+}
+
+async function selectRecipe(id) {
+  if (draft && draft.id === id) return;
+  if (!(await confirmLeaveDraft())) return;
+  Object.assign(recipeUI, { selectedId: id, detailOpen: true });
+  showRecipesTab();
+}
+
+/** Opens the editor on the right: an existing recipe by id, or a new one when id is null. */
+async function startRecipeDraft(id) {
+  if (draft && draft.id === id && id) return showRecipesTab();
+  if (!(await confirmLeaveDraft())) return;
   const r = id ? findRecipe(id) : null;
   draft = r
     ? {
@@ -666,67 +707,130 @@ function startRecipeDraft(id) {
     }
     : { id: newId(), isNew: true, name: '', yieldText: '', lines: [{ ingredient_id: '', amountText: '' }] };
   draft.snapshot = draftSnapshot(draft);
-  if (location.hash !== '#recipes') location.hash = 'recipes';
-  else render();
-  window.scrollTo(0, 0);
+  if (r) recipeUI.selectedId = r.id;
+  recipeUI.detailOpen = true;
+  showRecipesTab();
+}
+
+/** Opens the calculator with this recipe selected, starting from clean batch inputs. */
+async function costRecipe(id) {
+  if (!(await confirmLeaveDraft())) return;
+  if (calc.recipeId !== id) {
+    const { mode } = calc;
+    resetCalc();
+    Object.assign(calc, { recipeId: id, mode });
+  }
+  location.hash = 'calculator';
 }
 
 function renderRecipes(view) {
-  if (draft) renderRecipeEditor(view);
-  else renderRecipeList(view);
-}
-
-function renderRecipeList(view) {
   const recipes = [...data.recipes].sort(byName);
-  const noIngredients = activeIngredients().length === 0;
+  if (recipeUI.selectedId && !findRecipe(recipeUI.selectedId)) recipeUI.selectedId = null;
+  // On a wide screen there's always something on the right: default to the first recipe.
+  if (!recipeUI.selectedId && recipes.length) recipeUI.selectedId = recipes[0].id;
+
+  if (!recipes.length && !draft) {
+    const noIngredients = activeIngredients().length === 0;
+    view.innerHTML = `
+      <div class="view-head"><h1>Recipes</h1></div>
+      ${emptyState('No recipes yet',
+        noIngredients
+          ? 'Add your ingredients first, then build a recipe from them.'
+          : 'A recipe is a list of ingredients and amounts, plus how many units one batch makes.',
+        noIngredients
+          ? '<a class="btn btn-primary" href="#ingredients">Go to Ingredients</a>'
+          : '<button class="btn btn-primary" data-action="recipe-new">+ New recipe</button>')}`;
+    return;
+  }
+
+  const showDetail = recipeUI.detailOpen || !!draft;
+  const activeId = draft ? draft.id : recipeUI.selectedId;
+  const selected = findRecipe(recipeUI.selectedId);
   view.innerHTML = `
     <div class="view-head">
       <h1>Recipes</h1>
       <button class="btn btn-primary" data-action="recipe-new">+ New recipe</button>
     </div>
-    ${recipes.length ? `
-      <div class="cards">
-        ${recipes.map((r) => {
-          const c = ingredientCost(r);
-          return `
-            <article class="card recipe-card tap-row${c.missing.length ? ' has-missing' : ''}" data-action="recipe-edit" data-id="${esc(r.id)}">
-              <div class="recipe-head">
-                <div>
-                  <h2>${esc(r.name)}</h2>
-                  <p class="muted">Makes ${qty(r.yield_units)} · ${plural(r.ingredients.length, 'ingredient')}</p>
-                  ${c.missing.length ? `<p class="warn-text">⚠ Missing: ${c.missing.map(esc).join(', ')}</p>` : ''}
-                </div>
-                ${optionsMenu('recipe', r)}
-              </div>
-              <div class="recipe-cost">
-                <strong>${money(c.total)}</strong>
-                <span class="muted">ingredients per batch · ${money(c.total / r.yield_units)} per unit${c.missing.length ? ' (incomplete)' : ''}</span>
-              </div>
-              ${c.missing.length ? `<div class="row-actions"><button class="btn btn-small btn-primary" data-action="recipe-edit" data-id="${esc(r.id)}">Fix missing ingredients</button></div>` : ''}
-            </article>`;
-        }).join('')}
-      </div>`
-    : emptyState('No recipes yet',
-      noIngredients
-        ? 'Add your ingredients first, then build a recipe from them.'
-        : 'A recipe is a list of ingredients and amounts, plus how many units one batch makes.',
-      noIngredients
-        ? '<a class="btn btn-primary" href="#ingredients">Go to Ingredients</a>'
-        : '<button class="btn btn-primary" data-action="recipe-new">+ New recipe</button>')}`;
+    <div class="split${showDetail ? ' show-detail' : ''}">
+      <nav class="split-list card" aria-label="Recipes">
+        ${draft && draft.isNew ? `
+          <div class="recipe-item selected"><span class="ri-name">${esc(draft.name.trim() || 'New recipe')}</span><span class="ri-meta">Not saved yet</span></div>` : ''}
+        ${recipes.map((r) => recipeItemHTML(r, r.id === activeId)).join('')}
+      </nav>
+      <section class="split-detail">
+        ${draft ? recipeEditorHTML() : selected ? recipeViewHTML(selected) : ''}
+      </section>
+    </div>`;
+  if (draft) updateDraftTotals();
 }
 
-function renderRecipeEditor(view) {
+function recipeItemHTML(r, isSelected) {
+  const c = ingredientCost(r);
+  return `
+    <button class="recipe-item${isSelected ? ' selected' : ''}" data-action="recipe-select" data-id="${esc(r.id)}"${isSelected ? ' aria-current="true"' : ''}>
+      <span class="ri-name">${esc(r.name)}${c.missing.length ? ' <span class="ri-warn" title="Missing ingredients">⚠</span>' : ''}</span>
+      <span class="ri-meta">Makes ${qty(r.yield_units)} · ${money(c.total / r.yield_units)} per unit</span>
+    </button>`;
+}
+
+function recipeViewHTML(r) {
+  const c = ingredientCost(r);
+  const lines = r.ingredients.map((line) => {
+    const ing = findIngredient(line.ingredient_id);
+    const missing = !ing || ing.deleted;
+    return `
+      <tr${missing ? ' class="missing-row"' : ''}>
+        <td>${esc(ing ? ing.name : 'Unknown ingredient')}${missing ? ' <span class="badge-warn">Missing</span>' : ''}</td>
+        <td class="num">${qty(line.amount)} ${ing ? unitLabel(ing.unit) : ''}</td>
+        <td class="num">${missing ? '—' : money(line.amount * unitCost(ing))}</td>
+      </tr>`;
+  }).join('');
+  return `
+    <article class="card recipe-view">
+      <button class="btn btn-ghost back-btn" data-action="recipe-back">‹ All recipes</button>
+      <div class="detail-head">
+        <div>
+          <h2 class="detail-name">${esc(r.name)}</h2>
+          <p class="muted">Makes ${plural(r.yield_units, 'unit')} per batch</p>
+        </div>
+        <div class="detail-actions">
+          <button class="btn btn-small" data-action="recipe-edit" data-id="${esc(r.id)}">Edit</button>
+          ${optionsMenu('recipe', r, ['duplicate', 'delete'])}
+        </div>
+      </div>
+      ${c.missing.length ? `
+        <div class="alert alert-warn"><strong>Cost is incomplete.</strong> Missing: ${c.missing.map(esc).join(', ')}.
+          <button class="link-btn" data-action="recipe-edit" data-id="${esc(r.id)}">Fix in editor</button></div>` : ''}
+      <div class="table-wrap">
+        <table class="list">
+          <thead><tr><th>Ingredient</th><th class="num">Amount</th><th class="num">Cost</th></tr></thead>
+          <tbody>${lines}</tbody>
+        </table>
+      </div>
+      <div class="per-unit">
+        <span>Ingredients per unit<small>${money(c.total)} per batch ÷ ${plural(r.yield_units, 'unit')}${c.missing.length ? ' · incomplete' : ''}</small></span>
+        <strong>${money(c.total / r.yield_units)}</strong>
+      </div>
+      <div class="cost-cta">
+        <p class="hint">Labour, baking, packaging and your margin are added in the calculator.</p>
+        <button class="btn btn-primary" data-action="recipe-cost" data-id="${esc(r.id)}">Cost this batch →</button>
+      </div>
+    </article>`;
+}
+
+function recipeEditorHTML() {
   const opts = activeIngredients();
-  view.innerHTML = `
-    <div class="view-head"><h1>${draft.isNew ? 'New recipe' : 'Edit recipe'}</h1></div>
+  return `
     <div class="card">
+      <button class="btn btn-ghost back-btn" data-action="recipe-cancel">‹ Cancel</button>
+      <h2 class="detail-name editor-title">${draft.isNew ? 'New recipe' : 'Edit recipe'}</h2>
       <div class="field-row">
         <label class="field grow"><span>Recipe name</span>
           <input data-draft="name" value="${esc(draft.name)}" autocomplete="off" autocapitalize="words" placeholder="e.g. Vanilla cupcakes"></label>
         <label class="field"><span>Yield (units per batch)</span>
           <input data-draft="yieldText" inputmode="decimal" autocomplete="off" value="${esc(draft.yieldText)}" placeholder="e.g. 12"></label>
       </div>
-      <h2 class="section-title">Ingredients</h2>
+      <h3 class="section-title">Ingredients</h3>
       ${opts.length ? '' : '<p class="hint">You have no ingredients yet. <a href="#ingredients">Add some</a> — this draft will be kept while you do.</p>'}
       <div class="lines">${draft.lines.map((l, i) => recipeLineHTML(l, i, opts)).join('')}</div>
       <button class="btn" data-action="line-add">+ Add ingredient</button>
@@ -737,8 +841,8 @@ function renderRecipeEditor(view) {
         <button class="btn btn-primary" data-action="recipe-save">Save recipe</button>
       </div>
     </div>`;
-  updateDraftTotals();
 }
+
 
 function recipeLineHTML(line, i, opts) {
   const ing = line.ingredient_id ? findIngredient(line.ingredient_id) : null;
@@ -839,23 +943,16 @@ function saveDraft() {
   else data.recipes.push(recipe);
   if (!saveData()) return;
   draft = null;
+  recipeUI.selectedId = recipe.id; // back to viewing the saved recipe
   render();
-  window.scrollTo(0, 0);
   toast('Recipe saved');
 }
 
 async function cancelDraft() {
-  if (draftSnapshot(draft) !== draft.snapshot) {
-    const ok = await openModal({
-      title: 'Discard changes?',
-      body: '<p>Your changes to this recipe will be lost.</p>',
-      okLabel: 'Discard',
-      cancelLabel: 'Keep editing',
-      danger: true,
-    });
-    if (!ok) return;
-  }
-  draft = null;
+  const wasNew = draft.isNew;
+  if (!(await confirmLeaveDraft())) return;
+  // Cancelling a new recipe on a narrow screen goes back to the list; otherwise back to viewing.
+  if (wasNew) recipeUI.detailOpen = false;
   render();
 }
 
@@ -875,13 +972,15 @@ function duplicateRecipe(id) {
       const name = fieldValue(form, 'name').trim();
       if (!name) return 'Enter a name for the copy.';
       if (data.recipes.some((x) => sameName(x.name, name))) return `There's already a recipe called “${name}”.`;
-      data.recipes.push({
+      const copy = {
         id: newId(),
         name,
         yield_units: r.yield_units,
         ingredients: r.ingredients.map((l) => ({ ingredient_id: l.ingredient_id, amount: l.amount })),
-      });
+      };
+      data.recipes.push(copy);
       saveData();
+      recipeUI.selectedId = copy.id; // show the new copy
       render();
       toast(`Created ${name}`);
       return '';
@@ -901,6 +1000,7 @@ async function deleteRecipe(id) {
   if (!ok) return;
   data.recipes = data.recipes.filter((x) => x.id !== id);
   if (calc.recipeId === id) calc.recipeId = '';
+  if (recipeUI.selectedId === id) Object.assign(recipeUI, { selectedId: null, detailOpen: false });
   saveData();
   render();
   toast(`${r.name} deleted`);
@@ -1235,6 +1335,12 @@ const ACTIONS = {
   'pkg-delete': (el) => deletePackaging(el.dataset.id),
   'recipe-new': () => startRecipeDraft(null),
   'recipe-edit': (el) => startRecipeDraft(el.dataset.id),
+  'recipe-select': (el) => selectRecipe(el.dataset.id),
+  'recipe-back': () => {
+    recipeUI.detailOpen = false;
+    render();
+  },
+  'recipe-cost': (el) => costRecipe(el.dataset.id),
   'recipe-duplicate': (el) => duplicateRecipe(el.dataset.id),
   'recipe-delete': (el) => deleteRecipe(el.dataset.id),
   'menu-toggle': (el) => {
