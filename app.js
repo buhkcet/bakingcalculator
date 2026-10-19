@@ -794,8 +794,7 @@ function recipeViewHTML(r) {
           <p class="muted">Makes ${plural(r.yield_units, 'unit')} per batch</p>
         </div>
         <div class="detail-actions">
-          <button class="btn btn-small" data-action="recipe-edit" data-id="${esc(r.id)}">Edit</button>
-          ${optionsMenu('recipe', r, ['duplicate', 'delete'])}
+          ${optionsMenu('recipe', r)}
         </div>
       </div>
       ${c.missing.length ? `
