@@ -255,11 +255,6 @@ const recipesUsing = (ingredientId) =>
 /** Cost per gram or per item. Derived, never stored. */
 const unitCost = (ing) => ing.pack_price / ing.pack_qty;
 
-function unitCostLabel(ing) {
-  const c = unitCost(ing);
-  return ing.unit === 'g' ? `${fineMoney(c)} / g <span class="muted">(${money(c * 1000)} / kg)</span>` : `${money(c)} each`;
-}
-
 /** Ingredient cost of a recipe. Lines pointing at deleted or unknown ingredients are excluded and reported. */
 function ingredientCost(recipe) {
   let total = 0;
@@ -427,14 +422,13 @@ function renderIngredients(view) {
     ${list.length ? `
       <div class="card table-wrap">
         <table class="list">
-          <thead><tr><th>Name</th><th class="num">Pack</th><th class="num">Pack price</th><th class="num">Cost</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th class="num">Pack</th><th class="num">Pack price</th><th></th></tr></thead>
           <tbody>
             ${list.map((i) => `
               <tr class="tap-row" data-action="ing-edit" data-id="${esc(i.id)}">
                 <td class="name">${esc(i.name)}</td>
                 <td class="num">${qty(i.pack_qty)} ${unitLabel(i.unit)}</td>
                 <td class="num">${money(i.pack_price)}</td>
-                <td class="num">${unitCostLabel(i)}</td>
                 <td class="menu-cell">${optionsMenu('ing', i)}</td>
               </tr>`).join('')}
           </tbody>
