@@ -1189,16 +1189,16 @@ function renderCalculator(view) {
 function pricingHTML() {
   const marginMode = calc.mode === 'margin';
   return `
-    <div class="card-head">
-      <h2 class="section-title">Price per serving</h2>
+    <h2 class="section-title">Price per serving</h2>
+    <div class="price-input-row">
       <div class="seg seg-small" role="group" aria-label="What you set">
         <button type="button" class="${marginMode ? 'on' : ''}" aria-pressed="${marginMode}" data-action="calc-mode" data-mode="margin" title="Set a margin, see the price">Margin</button>
         <button type="button" class="${marginMode ? '' : 'on'}" aria-pressed="${!marginMode}" data-action="calc-mode" data-mode="price" title="Set a price, see the margin">Price</button>
       </div>
+      ${marginMode
+        ? `<div class="amount"><input data-calc="margin" inputmode="decimal" autocomplete="off" value="${esc(calc.margin)}" aria-label="Margin, as a percentage of the selling price"><span class="unit">%</span></div>`
+        : `<div class="amount"><span class="pre">$</span><input data-calc="price" inputmode="decimal" autocomplete="off" value="${esc(calc.price)}" placeholder="e.g. 3.50" aria-label="Selling price per serving"></div>`}
     </div>
-    ${marginMode
-      ? `<div class="amount"><input data-calc="margin" inputmode="decimal" autocomplete="off" value="${esc(calc.margin)}" aria-label="Margin, as a percentage of the selling price"><span class="unit">%</span></div>`
-      : `<div class="amount"><span class="pre">$</span><input data-calc="price" inputmode="decimal" autocomplete="off" value="${esc(calc.price)}" placeholder="e.g. 3.50" aria-label="Selling price per serving"></div>`}
     <div class="price-out" id="calc-price-out" aria-live="polite"></div>`;
 }
 
@@ -1250,11 +1250,8 @@ function updateCalcOutputs() {
       <tr><th>Packaging<small>${plural(b.packCount, 'item')}</small></th><td>${money(b.packaging)}</td></tr>
       <tr><th>Misc</th><td>${money(b.misc)}</td></tr>
       <tr class="total"><th>Total batch cost</th><td>${money(b.total)}</td></tr>
-    </table>
-    <div class="per-unit">
-      <span>Cost per serving<small>${money(b.total)} ÷ ${plural(b.recipe.yield_units, 'serving')}</small></span>
-      <strong>${money(b.perUnit)}</strong>
-    </div>`;
+      <tr class="total per-serving"><th>Cost per serving<small>÷ ${plural(b.recipe.yield_units, 'serving')}</small></th><td>${money(b.perUnit)}</td></tr>
+    </table>`;
   out.innerHTML = priceOutputHTML(b);
 }
 
