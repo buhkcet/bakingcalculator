@@ -125,22 +125,9 @@ h2 { font-size: 20px; }
   white-space: nowrap;
 }
 .tabs a.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
-/* Gear sits beside the tab bar as its own small pill: same height and
-   background, with a narrow gap so it reads as related but separate. */
-.settings-link {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 50px;
-  height: 50px;
-  margin-left: -10px; /* header gap is 16px; this leaves 6px */
-  border-radius: 12px;
-  background: var(--surface-2);
-  color: var(--muted);
-}
-.settings-link.active { color: var(--text); box-shadow: inset 0 0 0 4px var(--surface-2), inset 0 0 0 50px var(--surface); }
+/* Settings is the last item in the tab bar: a gear set apart by a thin divider. */
+.tab-sep { flex: none; width: 1.5px; margin: 10px 4px; border-radius: 1px; background: var(--muted); opacity: .45; }
+.tabs a.settings-link { flex: none; width: 48px; padding: 0; }
 .settings-link.attention::after {
   content: "";
   position: absolute;
@@ -153,10 +140,10 @@ h2 { font-size: 20px; }
 }
 
 @media (max-width: 760px) {
-  /* Brand and gear share the top row; tabs get a full row below. */
-  .settings-link { order: 1; margin-left: auto; }
-  .tabs { order: 2; width: 100%; margin-left: 0; }
+  /* Tabs get a full-width row below the brand. */
+  .tabs { width: 100%; margin-left: 0; }
   .tabs a { flex: 1; padding: 0 8px; }
+  .tabs a.settings-link { flex: none; }
 }
 
 /* ---------- Page ---------- */
