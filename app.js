@@ -744,7 +744,7 @@ async function startRecipeDraft(id) {
       bakeText: r.bake_min !== undefined ? String(r.bake_min) : '',
       lines: r.ingredients.map((l) => ({ ingredient_id: l.ingredient_id, amountText: String(l.amount) })),
     }
-    : { id: newId(), isNew: true, name: '', yieldText: '', labourText: '', bakeText: '', lines: [{ ingredient_id: '', amountText: '' }] };
+    : { id: newId(), isNew: true, name: '', yieldText: '', labourText: '', bakeText: '', lines: [] };
   draft.snapshot = draftSnapshot(draft);
   if (r) recipeUI.selectedId = r.id;
   recipeUI.detailOpen = true;
@@ -878,16 +878,28 @@ function recipeEditorHTML() {
       <div class="table-wrap">
         <table class="list edit-table">
           <thead><tr><th>Ingredient</th><th class="num">Amount</th><th class="num cost-col">Cost</th><th class="remove-col"></th></tr></thead>
-          <tbody>${draft.lines.map((l, i) => recipeLineHTML(l, i, opts)).join('')}</tbody>
+          <tbody>${draft.lines.map((l, i) => recipeLineHTML(l, i, opts)).join('')}${opts.length ? newLineHTML(opts) : ''}</tbody>
         </table>
       </div>
-      <button class="chip" data-action="line-add">+ Add ingredient</button>
       <p class="form-error" id="draft-error" role="alert" hidden></p>
       <div class="cost-cta">
         <button class="btn" data-action="recipe-cancel">Cancel</button>
         <button class="btn btn-primary" data-action="recipe-save">Save recipe</button>
       </div>
     </article>`;
+}
+
+/** The always-there empty row at the end: picking an ingredient here adds a line. */
+function newLineHTML(opts) {
+  return `
+    <tr class="new-line">
+      <td><select data-line="new" aria-label="Add ingredient">
+        <option value="">Add ingredient…</option>${options(opts, '')}
+      </select></td>
+      <td class="num"><div class="amount"><input placeholder="0" aria-hidden="true" tabindex="-1" disabled><span class="unit"></span></div></td>
+      <td class="num cost-col"></td>
+      <td class="remove-col"></td>
+    </tr>`;
 }
 
 function recipeLineHTML(line, i, opts) {
@@ -1412,11 +1424,6 @@ const ACTIONS = {
   },
   'recipe-save': () => saveDraft(),
   'recipe-cancel': () => cancelDraft(),
-  'line-add': () => {
-    draft.lines.push({ ingredient_id: '', amountText: '' });
-    render();
-    $$('[data-line="ingredient"]').pop()?.focus();
-  },
   'line-remove': (el) => {
     draft.lines.splice(Number(el.dataset.idx), 1);
     render();
@@ -1499,6 +1506,11 @@ function onViewInput(e) {
   } else if (el.dataset.line === 'amount') {
     draft.lines[Number(el.dataset.idx)].amountText = el.value;
     updateDraftTotals();
+  } else if (el.dataset.line === 'new') {
+    if (!el.value) return;
+    draft.lines.push({ ingredient_id: el.value, amountText: '' });
+    render();
+    $(`[data-line="amount"][data-idx="${draft.lines.length - 1}"]`)?.focus();
   } else if (el.dataset.line === 'ingredient') {
     draft.lines[Number(el.dataset.idx)].ingredient_id = el.value;
     render();
