@@ -351,9 +351,8 @@ table.list .desc { color: var(--muted); font-size: 15px; }
 
 .detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .detail-head p { margin: 4px 0 0; }
-.yield { font-size: 17px; }
-.yield strong { font-weight: 650; font-variant-numeric: tabular-nums; }
-.yield span { color: var(--muted); }
+.yield { font-size: 17px; color: var(--muted); }
+.yield strong { font-weight: inherit; font-variant-numeric: tabular-nums; }
 .detail-name { font-size: 24px; }
 .detail-actions { display: flex; align-items: center; gap: 4px; flex: none; }
 .recipe-view .table-wrap { margin-top: 4px; }
@@ -377,7 +376,8 @@ table.list .desc { color: var(--muted); font-size: 15px; }
 @supports (field-sizing: content) {
   .recipe-view input.detail-name { flex: 0 1 auto; width: auto; field-sizing: content; min-width: 6ch; }
 }
-.recipe-view input.inline-num { width: 3.6em; padding: 0 4px; font-size: 17px; text-align: center; }
+.recipe-view input.inline-num { width: 3.6em; padding: 0 4px; font-size: 17px; font-weight: 400; color: var(--muted); text-align: center; }
+.recipe-view input.inline-num:focus { color: var(--text); }
 .recipe-view input.detail-name:hover, .recipe-view input.inline-num:hover { border-bottom-color: var(--muted); }
 .recipe-view input.detail-name:focus, .recipe-view input.inline-num:focus { border-bottom-color: transparent; background: var(--surface-2); }
 .recipe-view input.inline-num.invalid { background: var(--danger-soft); border-bottom-color: var(--danger); }
