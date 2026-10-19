@@ -425,10 +425,20 @@ table.list .desc { color: var(--muted); font-size: 15px; }
   .back-btn { display: inline-flex; }
 }
 
-/* In a narrow detail pane, drop the per-line cost while editing; the per-unit total still updates. */
+/* In a narrow detail pane, tighten the edit rows so the cost column still fits. */
 @container (max-width: 480px) {
-  .edit-table .cost-col { display: none; }
-  .edit-table .amount input { flex-basis: 4.5em; }
+  .edit-table td { padding-left: 4px; padding-right: 4px; }
+  .edit-table th { padding-left: 4px; padding-right: 4px; }
+  /* Fixed column widths so the ingredient dropdown gives way, not the amount box. */
+  .edit-table { table-layout: fixed; }
+  .edit-table th:nth-child(2) { width: 88px; }
+  .edit-table th.cost-col { width: 60px; }
+  .edit-table th.remove-col { width: 30px; }
+  .edit-table .amount { gap: 4px; }
+  .edit-table .amount input { flex: 1 1 auto; padding-left: 6px; padding-right: 6px; }
+  .edit-table .amount .unit { min-width: 0; }
+  .edit-table select { padding-left: 10px; padding-right: 28px; background-position: calc(100% - 16px) 50%, calc(100% - 10px) 50%; }
+  .edit-table .icon-btn { width: 30px; }
   .split-detail .line-missing { grid-template-columns: minmax(0, 1fr) auto; }
   .split-detail .line-missing .missing-label { grid-column: 1 / -1; }
 }

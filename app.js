@@ -763,7 +763,7 @@ function recipeItemHTML(r, isSelected) {
   return `
     <button class="recipe-item${isSelected ? ' selected' : ''}" data-action="recipe-select" data-id="${esc(r.id)}"${isSelected ? ' aria-current="true"' : ''}>
       <span class="ri-name">${esc(r.name)}${c.missing.length ? ' <span class="ri-warn" title="Missing ingredients">⚠</span>' : ''}</span>
-      <span class="ri-meta">${plural(r.yield_units, 'serving')} · ${money(c.total / r.yield_units)} each</span>
+      <span class="ri-meta">${plural(r.yield_units, 'serving')}</span>
     </button>`;
 }
 
@@ -792,17 +792,13 @@ function recipeViewHTML(r) {
         </div>
       </div>
       ${c.missing.length ? `
-        <div class="alert alert-warn"><strong>Cost is incomplete.</strong> Missing: ${c.missing.map(esc).join(', ')}.
+        <div class="alert alert-warn"><strong>Missing ingredients:</strong> ${c.missing.map(esc).join(', ')}.
           <button class="link-btn" data-action="recipe-edit" data-id="${esc(r.id)}">Fix in editor</button></div>` : ''}
       <div class="table-wrap">
         <table class="list">
           <thead><tr><th>Ingredient</th><th class="num">Amount</th><th class="num">Cost</th></tr></thead>
           <tbody>${lines}</tbody>
         </table>
-      </div>
-      <div class="per-unit">
-        <span>Ingredients per serving<small>${money(c.total)} per batch ÷ ${plural(r.yield_units, 'serving')}${c.missing.length ? ' · incomplete' : ''}</small></span>
-        <strong>${money(c.total / r.yield_units)}</strong>
       </div>
       <div class="cost-cta">
         <button class="btn btn-ghost" data-action="recipe-cost" data-id="${esc(r.id)}">Cost this batch →</button>
@@ -833,10 +829,6 @@ function recipeEditorHTML() {
         </table>
       </div>
       <button class="chip" data-action="line-add">+ Add ingredient</button>
-      <div class="per-unit">
-        <span>Ingredients per serving<small id="draft-batch"></small></span>
-        <strong id="draft-unit"></strong>
-      </div>
       <p class="form-error" id="draft-error" role="alert" hidden></p>
       <div class="cost-cta">
         <button class="btn" data-action="recipe-cancel">Cancel</button>
@@ -874,34 +866,21 @@ function recipeLineHTML(line, i, opts) {
     </tr>`;
 }
 
+/** Refreshes each line's cost and the invalid-field highlights as the draft is typed into. */
 function updateDraftTotals() {
-  let total = 0;
-  let incomplete = false;
   draft.lines.forEach((line, i) => {
     const ing = line.ingredient_id ? findIngredient(line.ingredient_id) : null;
     const cell = $(`[data-cost-idx="${i}"]`);
-    if (!ing || ing.deleted) {
-      if (line.ingredient_id) incomplete = true;
-      return;
-    }
+    if (!ing || ing.deleted) return;
     const amount = parseNum(line.amountText);
     const input = $(`[data-line="amount"][data-idx="${i}"]`);
     if (input) input.classList.toggle('invalid', line.amountText.trim() !== '' && !Number.isFinite(amount));
-    if (!Number.isFinite(amount)) {
-      if (cell) cell.textContent = '';
-      return;
-    }
-    const cost = amount * unitCost(ing);
-    total += cost;
-    if (cell) cell.textContent = money(cost);
+    if (cell) cell.textContent = Number.isFinite(amount) ? money(amount * unitCost(ing)) : '';
   });
   const y = parseNum(draft.yieldText);
   const yInput = $('[data-draft="yieldText"]');
   if (yInput) yInput.classList.toggle('invalid', draft.yieldText.trim() !== '' && !(y > 0));
   $('#draft-units').textContent = y === 1 ? 'serving' : 'servings';
-  $('#draft-unit').textContent = y > 0 ? money(total / y) : '—';
-  $('#draft-batch').innerHTML = `${money(total)} per batch${y > 0 ? ` ÷ ${plural(y, 'serving')}` : ''}${
-    incomplete ? ' · <span class="warn-text">incomplete</span>' : ''}`;
 }
 
 function replaceLineIngredient(idx, newIngredientId) {
