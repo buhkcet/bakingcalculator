@@ -1267,8 +1267,8 @@ function updateCalcOutputs() {
   out.innerHTML = `
     ${result}
     <div class="stat-pair">
-      <div><span>Batch cost</span><strong>${money(b.total)}</strong></div>
-      <div><span>Per serving <em>(${qty(b.recipe.yield_units)})</em></span><strong>${money(b.perUnit)}</strong></div>
+      <div><span>Cost per batch</span><strong>${money(b.total)}</strong></div>
+      <div><span>Cost per serving</span><strong>${money(b.perUnit)}</strong></div>
     </div>
     ${profit}`;
 }
