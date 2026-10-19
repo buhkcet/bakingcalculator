@@ -805,7 +805,7 @@ function recipeViewHTML(r) {
         <strong>${money(c.total / r.yield_units)}</strong>
       </div>
       <div class="cost-cta">
-        <button class="btn btn-primary" data-action="recipe-cost" data-id="${esc(r.id)}">Cost this batch →</button>
+        <button class="btn btn-ghost" data-action="recipe-cost" data-id="${esc(r.id)}">Cost this batch →</button>
       </div>
     </article>`;
 }
