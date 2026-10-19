@@ -730,7 +730,7 @@ function renderRecipes(view) {
       ${emptyState('No recipes yet',
         noIngredients
           ? 'Add your ingredients first, then build a recipe from them.'
-          : 'A recipe is a list of ingredients and amounts, plus how many units one batch makes.',
+          : 'A recipe is a list of ingredients and amounts, plus how many servings one batch makes.',
         noIngredients
           ? '<a class="btn btn-primary" href="#ingredients">Go to Ingredients</a>'
           : '<button class="btn btn-primary" data-action="recipe-new">+ New recipe</button>')}`;
@@ -763,7 +763,7 @@ function recipeItemHTML(r, isSelected) {
   return `
     <button class="recipe-item${isSelected ? ' selected' : ''}" data-action="recipe-select" data-id="${esc(r.id)}"${isSelected ? ' aria-current="true"' : ''}>
       <span class="ri-name">${esc(r.name)}${c.missing.length ? ' <span class="ri-warn" title="Missing ingredients">⚠</span>' : ''}</span>
-      <span class="ri-meta">Makes ${qty(r.yield_units)} · ${money(c.total / r.yield_units)} per unit</span>
+      <span class="ri-meta">${plural(r.yield_units, 'serving')} · ${money(c.total / r.yield_units)} each</span>
     </button>`;
 }
 
@@ -785,7 +785,7 @@ function recipeViewHTML(r) {
       <div class="detail-head">
         <div>
           <h2 class="detail-name">${esc(r.name)}</h2>
-          <p class="muted">Makes ${plural(r.yield_units, 'unit')} per batch</p>
+          <p class="yield"><strong>${qty(r.yield_units)}</strong> <span>${r.yield_units === 1 ? 'serving' : 'servings'}</span></p>
         </div>
         <div class="detail-actions">
           ${optionsMenu('recipe', r)}
@@ -801,7 +801,7 @@ function recipeViewHTML(r) {
         </table>
       </div>
       <div class="per-unit">
-        <span>Ingredients per unit<small>${money(c.total)} per batch ÷ ${plural(r.yield_units, 'unit')}${c.missing.length ? ' · incomplete' : ''}</small></span>
+        <span>Ingredients per serving<small>${money(c.total)} per batch ÷ ${plural(r.yield_units, 'serving')}${c.missing.length ? ' · incomplete' : ''}</small></span>
         <strong>${money(c.total / r.yield_units)}</strong>
       </div>
       <div class="cost-cta">
@@ -822,7 +822,7 @@ function recipeEditorHTML() {
             <input class="detail-name" data-draft="name" value="${esc(draft.name)}" autocomplete="off" autocapitalize="words" placeholder="Recipe name" aria-label="Recipe name">
             <span class="edit-icon" aria-hidden="true">✎</span>
           </label>
-          <p class="muted">Makes <input class="inline-num" data-draft="yieldText" inputmode="decimal" autocomplete="off" value="${esc(draft.yieldText)}" placeholder="12" aria-label="Units per batch"> <span id="draft-units">units</span> per batch</p>
+          <p class="yield"><input class="inline-num" data-draft="yieldText" inputmode="decimal" autocomplete="off" value="${esc(draft.yieldText)}" placeholder="12" aria-label="Servings per batch"> <span id="draft-units">servings</span></p>
         </div>
       </div>
       ${opts.length ? '' : '<p class="hint">You have no ingredients yet. <a href="#ingredients">Add some</a> — this draft will be kept while you do.</p>'}
@@ -834,7 +834,7 @@ function recipeEditorHTML() {
       </div>
       <button class="chip" data-action="line-add">+ Add ingredient</button>
       <div class="per-unit">
-        <span>Ingredients per unit<small id="draft-batch"></small></span>
+        <span>Ingredients per serving<small id="draft-batch"></small></span>
         <strong id="draft-unit"></strong>
       </div>
       <p class="form-error" id="draft-error" role="alert" hidden></p>
@@ -898,9 +898,9 @@ function updateDraftTotals() {
   const y = parseNum(draft.yieldText);
   const yInput = $('[data-draft="yieldText"]');
   if (yInput) yInput.classList.toggle('invalid', draft.yieldText.trim() !== '' && !(y > 0));
-  $('#draft-units').textContent = y === 1 ? 'unit' : 'units';
+  $('#draft-units').textContent = y === 1 ? 'serving' : 'servings';
   $('#draft-unit').textContent = y > 0 ? money(total / y) : '—';
-  $('#draft-batch').innerHTML = `${money(total)} per batch${y > 0 ? ` ÷ ${plural(y, 'unit')}` : ''}${
+  $('#draft-batch').innerHTML = `${money(total)} per batch${y > 0 ? ` ÷ ${plural(y, 'serving')}` : ''}${
     incomplete ? ' · <span class="warn-text">incomplete</span>' : ''}`;
 }
 
@@ -931,7 +931,7 @@ function saveDraft() {
     return fail(`There's already a recipe called “${name}”.`);
   }
   const yieldUnits = parseNum(draft.yieldText);
-  if (!(yieldUnits > 0)) return fail('Yield must be a number above 0 — how many units one batch makes.');
+  if (!(yieldUnits > 0)) return fail('Yield must be a number above 0 — how many servings one batch makes.');
 
   const lines = [];
   for (const [i, line] of draft.lines.entries()) {
@@ -1131,7 +1131,7 @@ function renderCalculator(view) {
 function pricingHTML() {
   const marginMode = calc.mode === 'margin';
   return `
-    <h2 class="section-title">Price per unit</h2>
+    <h2 class="section-title">Price per serving</h2>
     <div class="seg" role="group" aria-label="Pricing mode">
       <button type="button" class="${marginMode ? 'on' : ''}" aria-pressed="${marginMode}" data-action="calc-mode" data-mode="margin">Set margin → price</button>
       <button type="button" class="${marginMode ? '' : 'on'}" aria-pressed="${!marginMode}" data-action="calc-mode" data-mode="price">Set price → margin</button>
@@ -1139,7 +1139,7 @@ function pricingHTML() {
     ${marginMode
       ? `<label class="field"><span>Margin (% of selling price)</span>
            <div class="amount"><input data-calc="margin" inputmode="decimal" autocomplete="off" value="${esc(calc.margin)}"><span class="unit">%</span></div></label>`
-      : `<label class="field"><span>Selling price per unit</span>
+      : `<label class="field"><span>Selling price per serving</span>
            <div class="amount"><span class="pre">$</span><input data-calc="price" inputmode="decimal" autocomplete="off" value="${esc(calc.price)}" placeholder="e.g. 3.50"></div></label>`}
     <div class="price-out" id="calc-price-out" aria-live="polite"></div>`;
 }
@@ -1194,7 +1194,7 @@ function updateCalcOutputs() {
       <tr class="total"><th>Total batch cost</th><td>${money(b.total)}</td></tr>
     </table>
     <div class="per-unit">
-      <span>Cost per unit<small>${money(b.total)} ÷ ${plural(b.recipe.yield_units, 'unit')}</small></span>
+      <span>Cost per serving<small>${money(b.total)} ÷ ${plural(b.recipe.yield_units, 'serving')}</small></span>
       <strong>${money(b.perUnit)}</strong>
     </div>`;
   out.innerHTML = priceOutputHTML(b);
@@ -1211,8 +1211,8 @@ function priceOutputHTML(b) {
     if (m >= 100) return '<p class="neg-text">Margin must be below 100%.</p>';
     const price = cost / (1 - m / 100);
     return `
-      <div class="big-result"><span>Selling price per unit</span><strong>${money(price)}</strong></div>
-      <p class="muted">Profit ${money(price - cost)} per unit · ${money((price - cost) * units)} per batch</p>`;
+      <div class="big-result"><span>Selling price per serving</span><strong>${money(price)}</strong></div>
+      <p class="muted">Profit ${money(price - cost)} per serving · ${money((price - cost) * units)} per batch</p>`;
   }
 
   const price = parseNum(calc.price);
@@ -1221,7 +1221,7 @@ function priceOutputHTML(b) {
   const loss = margin < 0;
   return `
     <div class="big-result${loss ? ' negative' : ''}"><span>Margin</span><strong>${pct(margin)}</strong></div>
-    <p class="${loss ? 'neg-text' : 'muted'}">${loss ? `Loss of ${money(cost - price)} per unit` : `Profit ${money(price - cost)} per unit`} · ${
+    <p class="${loss ? 'neg-text' : 'muted'}">${loss ? `Loss of ${money(cost - price)} per serving` : `Profit ${money(price - cost)} per serving`} · ${
       money((price - cost) * units)} per batch</p>`;
 }
 
