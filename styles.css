@@ -269,6 +269,22 @@ input.invalid { border-color: var(--danger); background: var(--danger-soft); }
 .amount .unit, .amount .pre { color: var(--muted); font-weight: 600; white-space: nowrap; }
 .amount .unit { min-width: 2.6em; }
 
+/* An input with its $ or unit drawn inside the box. The box styling moves to the wrapper. */
+.amount.inset {
+  gap: 6px;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  cursor: text;
+}
+.amount.inset input { min-height: 46px; padding: 0; border: 0; background: transparent; }
+.amount.inset input:focus { outline: none; }
+.amount.inset:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+.amount.inset:has(input.invalid) { border-color: var(--danger); background: var(--danger-soft); }
+.amount.inset .unit { min-width: 0; }
+
 .hint { color: var(--muted); font-size: 14px; margin: 0; }
 .field-error, .form-error { color: var(--danger); font-size: 14px; font-weight: 600; margin: 0; }
 .form-error { margin: 12px 0 0; }

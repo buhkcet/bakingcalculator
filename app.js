@@ -1157,10 +1157,12 @@ function renderCalculator(view) {
           <select data-calc="recipeId"><option value="">Choose a recipe…</option>${options(recipes, calc.recipeId)}</select></label>
         <div class="field-row">
           <label class="field"><span>Labour time</span>
-            <div class="amount"><input data-calc="labour" inputmode="decimal" autocomplete="off" value="${esc(calc.labour)}" placeholder="e.g. 90"><span class="unit">min</span></div></label>
+            <div class="amount inset"><input data-calc="labour" inputmode="decimal" autocomplete="off" value="${esc(calc.labour)}" placeholder="e.g. 90"><span class="unit">min</span></div></label>
           <label class="field"><span>Bake time</span>
-            <div class="amount"><input data-calc="bake" inputmode="decimal" autocomplete="off" value="${esc(calc.bake)}" placeholder="e.g. 25"><span class="unit">min</span></div></label>
+            <div class="amount inset"><input data-calc="bake" inputmode="decimal" autocomplete="off" value="${esc(calc.bake)}" placeholder="e.g. 25"><span class="unit">min</span></div></label>
         </div>
+        <label class="field"><span>Misc cost</span>
+          <div class="amount inset"><span class="pre">$</span><input data-calc="misc" inputmode="decimal" autocomplete="off" value="${esc(calc.misc)}" placeholder="0.00"></div></label>
         <div class="field"><span>Packaging</span>
           ${calc.packs.length ? `<div class="lines">${calc.packs.map((p, i) => `
             <div class="line">
@@ -1175,8 +1177,6 @@ function renderCalculator(view) {
             ? '<div><button class="btn" data-action="calc-pack-add">+ Add packaging</button></div>'
             : '<p class="hint">No packaging items yet. <a href="#overhead">Add them in Overhead</a>.</p>'}
         </div>
-        <label class="field"><span>Misc cost</span>
-          <div class="amount"><span class="pre">$</span><input data-calc="misc" inputmode="decimal" autocomplete="off" value="${esc(calc.misc)}" placeholder="0.00"></div></label>
       </section>
       <section class="card results" aria-label="Results">
         <div id="calc-breakdown"></div>
@@ -1196,8 +1196,8 @@ function pricingHTML() {
         <button type="button" class="${marginMode ? '' : 'on'}" aria-pressed="${!marginMode}" data-action="calc-mode" data-mode="price" title="Set a price, see the margin">Price</button>
       </div>
       ${marginMode
-        ? `<div class="amount"><input data-calc="margin" inputmode="decimal" autocomplete="off" value="${esc(calc.margin)}" aria-label="Margin, as a percentage of the selling price"><span class="unit">%</span></div>`
-        : `<div class="amount"><span class="pre">$</span><input data-calc="price" inputmode="decimal" autocomplete="off" value="${esc(calc.price)}" placeholder="e.g. 3.50" aria-label="Selling price per serving"></div>`}
+        ? `<label class="amount inset"><input data-calc="margin" inputmode="decimal" autocomplete="off" value="${esc(calc.margin)}" aria-label="Margin, as a percentage of the selling price"><span class="unit">%</span></label>`
+        : `<label class="amount inset"><span class="pre">$</span><input data-calc="price" inputmode="decimal" autocomplete="off" value="${esc(calc.price)}" placeholder="e.g. 3.50" aria-label="Selling price per serving"></label>`}
     </div>
     <div class="price-out" id="calc-price-out" aria-live="polite"></div>`;
 }
