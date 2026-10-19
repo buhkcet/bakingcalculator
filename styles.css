@@ -567,7 +567,6 @@ table.breakdown tr.total th, table.breakdown tr.total td { border-top: 2px solid
 
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .card-head .section-title { margin: 0; }
-.page-note { margin: 12px 4px 0; }
 .settings-grid { display: grid; gap: 0 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .export-status { margin: 0 0 4px; }
 .export-status.stale strong { color: var(--warn-ink); }

@@ -542,10 +542,10 @@ async function deleteIngredient(id) {
    ========================================================= */
 
 const SETTING_FIELDS = [
-  { key: 'labour_rate_per_hr', group: 'rates', label: 'Labour rate', pre: '$', post: 'per hour', hint: 'What you pay yourself or staff for an hour of work.' },
-  { key: 'electricity_per_kwh', group: 'rates', label: 'Electricity price', pre: '$', post: 'per kWh', hint: 'The per-kWh rate on your power bill.' },
-  { key: 'oven_kw', group: 'rates', label: 'Oven power', pre: '', post: 'kW', hint: "On the oven's rating plate or manual. Many home ovens are 2–3.5 kW." },
-  { key: 'default_margin_pct', group: 'pricing', label: 'Default margin', pre: '', post: '%', hint: 'The calculator starts here. Margin is a percentage of the selling price.' },
+  { key: 'labour_rate_per_hr', group: 'rates', label: 'Labour rate', pre: '$', post: 'per hour' },
+  { key: 'electricity_per_kwh', group: 'rates', label: 'Electricity price', pre: '$', post: 'per kWh' },
+  { key: 'oven_kw', group: 'rates', label: 'Oven power', pre: '', post: 'kW' },
+  { key: 'default_margin_pct', group: 'pricing', label: 'Default margin', pre: '', post: '%' },
 ];
 
 function settingFieldsHTML(group) {
@@ -554,7 +554,6 @@ function settingFieldsHTML(group) {
       ${SETTING_FIELDS.filter((f) => f.group === group).map((f) => `
         <label class="field"><span>${esc(f.label)}</span>
           <div class="amount">${f.pre ? `<span class="pre">${f.pre}</span>` : ''}<input data-setting="${f.key}" inputmode="decimal" autocomplete="off" value="${data.settings[f.key]}"><span class="unit">${esc(f.post)}</span></div>
-          <small class="hint">${esc(f.hint)}</small>
           <small class="field-error" data-setting-error="${f.key}" hidden></small>
         </label>`).join('')}
     </div>`;
@@ -592,8 +591,7 @@ function renderOverhead(view) {
     <section class="card">
       <h2 class="section-title">Pricing</h2>
       ${settingFieldsHTML('pricing')}
-    </section>
-    <p class="hint page-note">Rates and pricing save as you type.</p>`;
+    </section>`;
 }
 
 function editPackaging(id) {
