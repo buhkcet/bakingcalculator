@@ -1299,8 +1299,8 @@ function profitRowHTML(perServing, units) {
   const word = loss ? 'Loss' : 'Profit';
   return `
     <div class="stat-pair profit-row${loss ? ' loss' : ''}">
-      <div><span>${word} per serving</span><strong>${money(Math.abs(perServing))}</strong></div>
       <div><span>${word} per batch</span><strong>${money(Math.abs(perServing * units))}</strong></div>
+      <div><span>${word} per serving</span><strong>${money(Math.abs(perServing))}</strong></div>
     </div>`;
 }
 
