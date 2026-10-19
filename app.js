@@ -1264,7 +1264,7 @@ function updateCalcOutputs() {
     </table>
     <div class="stat-pair">
       <div><span>Batch cost</span><strong>${money(b.total)}</strong></div>
-      <div><span>Per serving</span><strong>${money(b.perUnit)}</strong><small>÷ ${plural(b.recipe.yield_units, 'serving')}</small></div>
+      <div><span>Per serving <em>(${qty(b.recipe.yield_units)})</em></span><strong>${money(b.perUnit)}</strong></div>
     </div>`;
   out.innerHTML = priceOutputHTML(b);
 }

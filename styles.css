@@ -566,8 +566,8 @@ table.breakdown tr + tr th, table.breakdown tr + tr td { border-top: 1px solid v
 /* Two results side by side: batch/per-serving cost, and profit. */
 .stat-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 .stat-pair > div { padding: 10px 14px; border-radius: 12px; background: var(--surface-2); }
-.stat-pair span, .stat-pair small { display: block; font-size: 13px; color: var(--muted); }
-.stat-pair span { font-weight: 600; }
+.stat-pair span { display: block; font-size: 13px; font-weight: 600; color: var(--muted); }
+.stat-pair span em { font-style: normal; font-weight: 400; }
 .stat-pair strong { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
 .profit-row strong { color: var(--ok); }
 .profit-row.loss strong { color: var(--danger); }
