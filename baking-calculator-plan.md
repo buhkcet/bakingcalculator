@@ -34,6 +34,8 @@ All data lives in one JSON structure, saved to browser storage.
       "id": "uuid",
       "name": "Vanilla cupcakes",
       "yield_units": 12,
+      "labour_min": 45,
+      "bake_min": 25,
       "ingredients": [ { "ingredient_id": "uuid", "amount": 300 } ]
     }
   ]
@@ -44,6 +46,7 @@ Rules:
 - `unit` is either `"g"` or `"each"`. A recipe line's `amount` is in that ingredient's unit.
 - Cost per unit is **derived**, never stored: `pack_price / pack_qty`.
 - Recipes store **only ingredient IDs and amounts**, never costs, so price changes propagate automatically.
+- `labour_min` and `bake_min` are optional (minutes). Recipes saved before they existed simply don't have them; no migration rewrites old data.
 - IDs come from `crypto.randomUUID()`.
 - `version` is there for future migrations.
 
@@ -62,7 +65,7 @@ Rules:
 - Use the same soft delete as ingredients. A warning isn't needed, because packaging isn't stored in recipes.
 
 ### 3. Recipes (save / load / edit / delete)
-- Fields: name, yield (units per batch), and ingredient lines (an ingredient picker plus an amount in that ingredient's unit).
+- Fields: name, yield (servings per batch), optional labour and bake time (minutes), and ingredient lines (an ingredient picker plus an amount in that ingredient's unit).
 - **Missing ingredients:** if a line points to a deleted ingredient:
   - Show "Missing: <name>".
   - Offer **Replace** (pick another ingredient and keep the amount) and **Remove** (drop the line).
@@ -71,14 +74,15 @@ Rules:
 ### 4. Calculator
 1. Select a saved recipe.
 2. Enter the inputs for this batch:
-   - Labour time (hours, decimal or h:mm)
-   - Bake time (minutes)
+   - Labour time (minutes, or h:mm)
+   - Bake time (minutes, or h:mm)
+   - Both start from the recipe's saved times, unless you've typed in that field. "Clear inputs" goes back to the recipe's times.
    - Packaging: pick items and quantities
    - Misc cost ($)
 3. Show a per-batch cost breakdown:
    - Ingredients = Σ amount × (pack_price / pack_qty)
    - Electricity = (bake_min / 60) × oven_kw × electricity_per_kwh
-   - Labour = hours × labour_rate_per_hr
+   - Labour = (labour_min / 60) × labour_rate_per_hr
    - Packaging = Σ qty × price
    - Misc = entered amount
    - **Total batch cost**, and **cost per unit** = total ÷ yield_units

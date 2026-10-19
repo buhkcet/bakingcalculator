@@ -351,8 +351,8 @@ table.list .desc { color: var(--muted); font-size: 15px; }
 
 .detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .detail-head p { margin: 4px 0 0; }
-.yield { font-size: 17px; color: var(--muted); }
-.yield strong { font-weight: inherit; font-variant-numeric: tabular-nums; }
+.yield { font-size: 17px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.yield > span { white-space: nowrap; }
 .detail-name { font-size: 24px; }
 .detail-actions { display: flex; align-items: center; gap: 4px; flex: none; }
 .recipe-view .table-wrap { margin-top: 4px; }

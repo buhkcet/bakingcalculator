@@ -52,13 +52,16 @@ function parseNum(value) {
   return Number(s);
 }
 
-/** Hours as a decimal ("1.5") or h:mm ("1:30"). */
-function parseHours(value) {
+/** Minutes as a plain number ("90") or h:mm ("1:30" → 90). */
+function parseMinutes(value) {
   const s = String(value ?? '').trim();
   const m = /^(\d+):([0-5]\d)$/.exec(s);
-  if (m) return Number(m[1]) + Number(m[2]) / 60;
+  if (m) return Number(m[1]) * 60 + Number(m[2]);
   return parseNum(s);
 }
+
+/** Optional per-recipe times, in minutes. Older recipes simply don't have them. */
+const RECIPE_TIMES = ['labour_min', 'bake_min'];
 
 const moneyFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const fineMoneyFmt = new Intl.NumberFormat('en-US', {
@@ -71,6 +74,13 @@ const money = (n) => (Number.isFinite(n) ? moneyFmt.format(n) : '—');
 const fineMoney = (n) => (Number.isFinite(n) ? fineMoneyFmt.format(n) : '—');
 const qty = (n) => (Number.isFinite(n) ? qtyFmt.format(n) : '—');
 const pct = (n) => `${pctFmt.format(n)}%`;
+/** 45 → "45 min", 90 → "1 h 30 min". */
+const minutesLabel = (n) => {
+  if (!Number.isFinite(n)) return '—';
+  const h = Math.floor(n / 60);
+  const m = Math.round((n - h * 60) * 10) / 10;
+  return h ? `${h} h${m ? ` ${qty(m)} min` : ''}` : `${qty(m)} min`;
+};
 const plural = (n, word) => `${qty(n)} ${word}${n === 1 ? '' : 's'}`;
 const unitLabel = (unit) => (unit === 'g' ? 'g' : 'each');
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
@@ -202,6 +212,9 @@ function validateData(obj) {
         return fail(`${w}.ingredients[${j}].ingredient_id is missing`);
       }
       if (!isNum(line.amount) || line.amount < 0) return fail(`${w}.ingredients[${j}].amount must be 0 or more`);
+    }
+    for (const key of RECIPE_TIMES) {
+      if (r[key] !== undefined && (!isNum(r[key]) || r[key] < 0)) return fail(`${w}.${key} must be 0 or more`);
     }
   }
 
@@ -679,10 +692,10 @@ async function deletePackaging(id) {
  */
 const recipeUI = { selectedId: null, detailOpen: false };
 
-/** The recipe being edited, as text fields: { id, isNew, name, yieldText, lines: [{ ingredient_id, amountText }], snapshot } */
+/** The recipe being edited, as text fields: { id, isNew, name, yieldText, labourText, bakeText, lines: [{ ingredient_id, amountText }], snapshot } */
 let draft = null;
 
-const draftSnapshot = (d) => JSON.stringify([d.name, d.yieldText, d.lines]);
+const draftSnapshot = (d) => JSON.stringify([d.name, d.yieldText, d.labourText, d.bakeText, d.lines]);
 const draftIsDirty = () => draft && draftSnapshot(draft) !== draft.snapshot;
 
 /** If there are unsaved recipe edits, ask before throwing them away. Resolves true when it's OK to move on. */
@@ -727,9 +740,11 @@ async function startRecipeDraft(id) {
       isNew: false,
       name: r.name,
       yieldText: String(r.yield_units),
+      labourText: r.labour_min !== undefined ? String(r.labour_min) : '',
+      bakeText: r.bake_min !== undefined ? String(r.bake_min) : '',
       lines: r.ingredients.map((l) => ({ ingredient_id: l.ingredient_id, amountText: String(l.amount) })),
     }
-    : { id: newId(), isNew: true, name: '', yieldText: '', lines: [{ ingredient_id: '', amountText: '' }] };
+    : { id: newId(), isNew: true, name: '', yieldText: '', labourText: '', bakeText: '', lines: [{ ingredient_id: '', amountText: '' }] };
   draft.snapshot = draftSnapshot(draft);
   if (r) recipeUI.selectedId = r.id;
   recipeUI.detailOpen = true;
@@ -815,7 +830,11 @@ function recipeViewHTML(r) {
       <div class="detail-head">
         <div>
           <h2 class="detail-name">${esc(r.name)}</h2>
-          <p class="yield"><strong>${qty(r.yield_units)}</strong> <span>${r.yield_units === 1 ? 'serving' : 'servings'}</span></p>
+          <p class="yield">${[
+            `${qty(r.yield_units)} ${r.yield_units === 1 ? 'serving' : 'servings'}`,
+            r.labour_min !== undefined ? `${minutesLabel(r.labour_min)} labour` : '',
+            r.bake_min !== undefined ? `${minutesLabel(r.bake_min)} bake` : '',
+          ].filter(Boolean).map((part) => `<span>${part}</span>`).join(' · ')}</p>
         </div>
         <div class="detail-actions">
           ${optionsMenu('recipe', r)}
@@ -848,7 +867,11 @@ function recipeEditorHTML() {
             <input class="detail-name" data-draft="name" value="${esc(draft.name)}" autocomplete="off" autocapitalize="words" placeholder="Recipe name" aria-label="Recipe name">
             <span class="edit-icon" aria-hidden="true">✎</span>
           </label>
-          <p class="yield"><input class="inline-num" data-draft="yieldText" inputmode="decimal" autocomplete="off" value="${esc(draft.yieldText)}" placeholder="12" aria-label="Servings per batch"> <span id="draft-units">servings</span></p>
+          <p class="yield">
+            <span><input class="inline-num" data-draft="yieldText" inputmode="decimal" autocomplete="off" value="${esc(draft.yieldText)}" placeholder="12" aria-label="Servings per batch"> <span id="draft-units">servings</span></span> ·
+            <span><input class="inline-num" data-draft="labourText" inputmode="decimal" autocomplete="off" value="${esc(draft.labourText)}" placeholder="–" aria-label="Labour minutes (optional)"> min labour</span> ·
+            <span><input class="inline-num" data-draft="bakeText" inputmode="decimal" autocomplete="off" value="${esc(draft.bakeText)}" placeholder="–" aria-label="Bake minutes (optional)"> min bake</span>
+          </p>
         </div>
       </div>
       ${opts.length ? '' : '<p class="hint">You have no ingredients yet. <a href="#ingredients">Add some</a> — this draft will be kept while you do.</p>'}
@@ -911,6 +934,10 @@ function updateDraftTotals() {
   const yInput = $('[data-draft="yieldText"]');
   if (yInput) yInput.classList.toggle('invalid', draft.yieldText.trim() !== '' && !(y > 0));
   $('#draft-units').textContent = y === 1 ? 'serving' : 'servings';
+  for (const key of ['labourText', 'bakeText']) {
+    const text = draft[key];
+    $(`[data-draft="${key}"]`)?.classList.toggle('invalid', text.trim() !== '' && !(parseMinutes(text) >= 0));
+  }
 }
 
 function replaceLineIngredient(idx, newIngredientId) {
@@ -941,6 +968,13 @@ function saveDraft() {
   }
   const yieldUnits = parseNum(draft.yieldText);
   if (!(yieldUnits > 0)) return fail('Yield must be a number above 0 — how many servings one batch makes.');
+  const times = {};
+  for (const [key, text, label] of [['labour_min', draft.labourText, 'Labour'], ['bake_min', draft.bakeText, 'Bake']]) {
+    if (!text.trim()) continue; // optional
+    const minutes = parseMinutes(text);
+    if (!(minutes >= 0)) return fail(`${label} time must be minutes, like 45, or h:mm, like 1:30.`);
+    times[key] = minutes;
+  }
 
   const lines = [];
   for (const [i, line] of draft.lines.entries()) {
@@ -952,7 +986,7 @@ function saveDraft() {
   }
   if (!lines.length) return fail('Add at least one ingredient.');
 
-  const recipe = { id: draft.id, name, yield_units: yieldUnits, ingredients: lines };
+  const recipe = { id: draft.id, name, yield_units: yieldUnits, ...times, ingredients: lines };
   const idx = data.recipes.findIndex((r) => r.id === draft.id);
   if (idx >= 0) data.recipes[idx] = recipe;
   else data.recipes.push(recipe);
@@ -993,6 +1027,7 @@ function duplicateRecipe(id) {
         yield_units: r.yield_units,
         ingredients: r.ingredients.map((l) => ({ ingredient_id: l.ingredient_id, amount: l.amount })),
       };
+      for (const key of RECIPE_TIMES) if (r[key] !== undefined) copy[key] = r[key];
       data.recipes.push(copy);
       saveData();
       recipeUI.selectedId = copy.id; // show the new copy
@@ -1027,8 +1062,9 @@ async function deleteRecipe(id) {
 
 const calc = {
   recipeId: '',
-  labour: '',
-  bake: '',
+  labour: '', // minutes
+  bake: '', // minutes
+  timesTouched: { labour: false, bake: false }, // typed in, so the recipe's times no longer fill them
   misc: '',
   packs: [], // { packaging_id, qty }
   mode: 'margin', // 'margin' → show price, 'price' → show margin
@@ -1038,7 +1074,19 @@ const calc = {
 };
 
 function resetCalc() {
-  Object.assign(calc, { recipeId: '', labour: '', bake: '', misc: '', packs: [], margin: '', marginTouched: false, price: '' });
+  Object.assign(calc, {
+    recipeId: '', labour: '', bake: '', timesTouched: { labour: false, bake: false },
+    misc: '', packs: [], margin: '', marginTouched: false, price: '',
+  });
+}
+
+/** Fills labour and bake time from the chosen recipe, except fields the user has typed in. */
+function fillRecipeTimes() {
+  const recipe = findRecipe(calc.recipeId);
+  if (!recipe) return;
+  for (const [field, key] of [['labour', 'labour_min'], ['bake', 'bake_min']]) {
+    if (!calc.timesTouched[field]) calc[field] = recipe[key] !== undefined ? String(recipe[key]) : '';
+  }
 }
 
 function computeBatch() {
@@ -1054,8 +1102,8 @@ function computeBatch() {
   };
 
   const ing = ingredientCost(recipe);
-  const hours = read(calc.labour, parseHours, 'labour time');
-  const bakeMin = read(calc.bake, parseNum, 'bake time');
+  const labourMin = read(calc.labour, parseMinutes, 'labour time');
+  const bakeMin = read(calc.bake, parseMinutes, 'bake time');
   const misc = read(calc.misc, parseNum, 'misc cost');
 
   let packaging = 0;
@@ -1069,10 +1117,10 @@ function computeBatch() {
   });
 
   const electricity = (bakeMin / 60) * s.oven_kw * s.electricity_per_kwh;
-  const labour = hours * s.labour_rate_per_hr;
+  const labour = (labourMin / 60) * s.labour_rate_per_hr;
   const total = ing.total + electricity + labour + packaging + misc;
   return {
-    recipe, ing, hours, bakeMin, electricity, labour, packaging, packCount, misc, total,
+    recipe, ing, labourMin, bakeMin, electricity, labour, packaging, packCount, misc, total,
     perUnit: total / recipe.yield_units,
     errors,
   };
@@ -1086,6 +1134,7 @@ function renderCalculator(view) {
     return item && !item.deleted;
   });
   if (!calc.marginTouched) calc.margin = String(data.settings.default_margin_pct);
+  fillRecipeTimes();
 
   const recipes = [...data.recipes].sort(byName);
   if (!recipes.length) {
@@ -1108,7 +1157,7 @@ function renderCalculator(view) {
           <select data-calc="recipeId"><option value="">Choose a recipe…</option>${options(recipes, calc.recipeId)}</select></label>
         <div class="field-row">
           <label class="field"><span>Labour time</span>
-            <div class="amount"><input data-calc="labour" inputmode="decimal" autocomplete="off" value="${esc(calc.labour)}" placeholder="1.5 or 1:30"><span class="unit">hours</span></div></label>
+            <div class="amount"><input data-calc="labour" inputmode="decimal" autocomplete="off" value="${esc(calc.labour)}" placeholder="e.g. 90"><span class="unit">min</span></div></label>
           <label class="field"><span>Bake time</span>
             <div class="amount"><input data-calc="bake" inputmode="decimal" autocomplete="off" value="${esc(calc.bake)}" placeholder="e.g. 25"><span class="unit">min</span></div></label>
         </div>
@@ -1170,8 +1219,8 @@ function updateCalcOutputs() {
     const v = calc[key];
     $(`[data-calc="${key}"]`)?.classList.toggle('invalid', String(v).trim() !== '' && !Number.isFinite(parse(v)));
   };
-  flag('labour', parseHours);
-  flag('bake', parseNum);
+  flag('labour', parseMinutes);
+  flag('bake', parseMinutes);
   flag('misc', parseNum);
   flag('margin', parseNum);
   flag('price', parseNum);
@@ -1192,12 +1241,12 @@ function updateCalcOutputs() {
         <button class="link-btn" data-action="recipe-edit" data-id="${esc(b.recipe.id)}">Fix recipe</button></div>` : ''}
     ${b.errors.length ? `
       <div class="alert alert-error">Check the ${b.errors.map(esc).join(', ')}. Use plain numbers like 2.5${
-        b.errors.includes('labour time') ? ' (labour can also be h:mm, like 1:30)' : ''}.</div>` : ''}
+        b.errors.some((e) => e.endsWith(' time')) ? ' (times can also be h:mm, like 1:30)' : ''}.</div>` : ''}
     <h2 class="section-title">Batch cost · ${esc(b.recipe.name)}</h2>
     <table class="breakdown">
       <tr><th>Ingredients${missing.length ? ' <span class="badge-warn">incomplete</span>' : ''}</th><td>${money(b.ing.total)}</td></tr>
-      <tr><th>Electricity<small>${qty(b.bakeMin)} min × ${qty(s.oven_kw)} kW × <a href="#overhead">${fineMoney(s.electricity_per_kwh)}/kWh</a></small></th><td>${money(b.electricity)}</td></tr>
-      <tr><th>Labour<small>${qty(b.hours)} h × <a href="#overhead">${money(s.labour_rate_per_hr)}/h</a></small></th><td>${money(b.labour)}</td></tr>
+      <tr><th>Electricity<small>${minutesLabel(b.bakeMin)} × ${qty(s.oven_kw)} kW × <a href="#overhead">${fineMoney(s.electricity_per_kwh)}/kWh</a></small></th><td>${money(b.electricity)}</td></tr>
+      <tr><th>Labour<small>${minutesLabel(b.labourMin)} × <a href="#overhead">${money(s.labour_rate_per_hr)}/h</a></small></th><td>${money(b.labour)}</td></tr>
       <tr><th>Packaging<small>${plural(b.packCount, 'item')}</small></th><td>${money(b.packaging)}</td></tr>
       <tr><th>Misc</th><td>${money(b.misc)}</td></tr>
       <tr class="total"><th>Total batch cost</th><td>${money(b.total)}</td></tr>
@@ -1426,9 +1475,13 @@ function onViewInput(e) {
   if ((el.tagName === 'SELECT') !== (e.type === 'change')) return;
 
   if (el.dataset.calc) {
-    calc[el.dataset.calc] = el.value;
-    if (el.dataset.calc === 'margin') calc.marginTouched = true;
-    updateCalcOutputs();
+    const key = el.dataset.calc;
+    calc[key] = el.value;
+    if (key === 'margin') calc.marginTouched = true;
+    if (key in calc.timesTouched) calc.timesTouched[key] = true;
+    // A new recipe can bring its own times, so redraw the inputs.
+    if (key === 'recipeId') render();
+    else updateCalcOutputs();
   } else if (el.dataset.pack) {
     const p = calc.packs[Number(el.dataset.idx)];
     if (el.dataset.pack === 'qty') p.qty = el.value;
