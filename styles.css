@@ -556,12 +556,19 @@ table.breakdown tr.total th, table.breakdown tr.total td { border-top: 2px solid
 .per-unit strong, .big-result strong { font-size: 28px; font-variant-numeric: tabular-nums; }
 
 .pricing { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
-.pricing .seg { margin-bottom: 14px; }
-.big-result { background: var(--accent-soft); margin-top: 0; }
+.pricing .card-head { margin-bottom: 10px; }
+.seg-small { flex: none; gap: 2px; padding: 3px; border-radius: 10px; }
+.seg-small button { flex: none; min-height: 32px; padding: 0 12px; border-radius: 8px; font-size: 14px; }
+.big-result { background: var(--accent-soft); margin-top: 12px; }
 .big-result strong { font-size: 34px; color: var(--accent-strong); }
 .big-result.negative { background: var(--danger-soft); }
 .big-result.negative strong { color: var(--danger); }
 .price-out p { margin: 8px 2px 0; font-size: 15px; }
+.profit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.profit-row > div { padding: 10px 14px; border-radius: 12px; background: var(--surface-2); }
+.profit-row span { display: block; font-size: 13px; font-weight: 600; color: var(--muted); }
+.profit-row strong { font-size: 22px; color: var(--ok); font-variant-numeric: tabular-nums; }
+.profit-row.loss strong { color: var(--danger); }
 
 /* ---------- Overhead & Settings ---------- */
 

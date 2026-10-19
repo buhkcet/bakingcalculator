@@ -1189,16 +1189,16 @@ function renderCalculator(view) {
 function pricingHTML() {
   const marginMode = calc.mode === 'margin';
   return `
-    <h2 class="section-title">Price per serving</h2>
-    <div class="seg" role="group" aria-label="Pricing mode">
-      <button type="button" class="${marginMode ? 'on' : ''}" aria-pressed="${marginMode}" data-action="calc-mode" data-mode="margin">Set margin → price</button>
-      <button type="button" class="${marginMode ? '' : 'on'}" aria-pressed="${!marginMode}" data-action="calc-mode" data-mode="price">Set price → margin</button>
+    <div class="card-head">
+      <h2 class="section-title">Price per serving</h2>
+      <div class="seg seg-small" role="group" aria-label="What you set">
+        <button type="button" class="${marginMode ? 'on' : ''}" aria-pressed="${marginMode}" data-action="calc-mode" data-mode="margin" title="Set a margin, see the price">Margin</button>
+        <button type="button" class="${marginMode ? '' : 'on'}" aria-pressed="${!marginMode}" data-action="calc-mode" data-mode="price" title="Set a price, see the margin">Price</button>
+      </div>
     </div>
     ${marginMode
-      ? `<label class="field"><span>Margin (% of selling price)</span>
-           <div class="amount"><input data-calc="margin" inputmode="decimal" autocomplete="off" value="${esc(calc.margin)}"><span class="unit">%</span></div></label>`
-      : `<label class="field"><span>Selling price per serving</span>
-           <div class="amount"><span class="pre">$</span><input data-calc="price" inputmode="decimal" autocomplete="off" value="${esc(calc.price)}" placeholder="e.g. 3.50"></div></label>`}
+      ? `<div class="amount"><input data-calc="margin" inputmode="decimal" autocomplete="off" value="${esc(calc.margin)}" aria-label="Margin, as a percentage of the selling price"><span class="unit">%</span></div>`
+      : `<div class="amount"><span class="pre">$</span><input data-calc="price" inputmode="decimal" autocomplete="off" value="${esc(calc.price)}" placeholder="e.g. 3.50" aria-label="Selling price per serving"></div>`}
     <div class="price-out" id="calc-price-out" aria-live="polite"></div>`;
 }
 
@@ -1269,18 +1269,27 @@ function priceOutputHTML(b) {
     if (m >= 100) return '<p class="neg-text">Margin must be below 100%.</p>';
     const price = cost / (1 - m / 100);
     return `
-      <div class="big-result"><span>Selling price per serving</span><strong>${money(price)}</strong></div>
-      <p class="muted">Profit ${money(price - cost)} per serving · ${money((price - cost) * units)} per batch</p>`;
+      <div class="big-result"><span>Selling price</span><strong>${money(price)}</strong></div>
+      ${profitRowHTML(price - cost, units)}`;
   }
 
   const price = parseNum(calc.price);
   if (!(price > 0)) return '<p class="muted">Enter a selling price to see your margin.</p>';
   const margin = ((price - cost) / price) * 100;
-  const loss = margin < 0;
   return `
-    <div class="big-result${loss ? ' negative' : ''}"><span>Margin</span><strong>${pct(margin)}</strong></div>
-    <p class="${loss ? 'neg-text' : 'muted'}">${loss ? `Loss of ${money(cost - price)} per serving` : `Profit ${money(price - cost)} per serving`} · ${
-      money((price - cost) * units)} per batch</p>`;
+    <div class="big-result${margin < 0 ? ' negative' : ''}"><span>Margin</span><strong>${pct(margin)}</strong></div>
+    ${profitRowHTML(price - cost, units)}`;
+}
+
+/** Profit (or loss) per serving and per batch, side by side. */
+function profitRowHTML(perServing, units) {
+  const loss = perServing < 0;
+  const word = loss ? 'Loss' : 'Profit';
+  return `
+    <div class="profit-row${loss ? ' loss' : ''}">
+      <div><span>${word} per serving</span><strong>${money(Math.abs(perServing))}</strong></div>
+      <div><span>${word} per batch</span><strong>${money(Math.abs(perServing * units))}</strong></div>
+    </div>`;
 }
 
 /* =========================================================
