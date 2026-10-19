@@ -558,8 +558,9 @@ table.breakdown tr + tr th, table.breakdown tr + tr td { border-top: 1px solid v
 .price-input-row .amount { flex: 1; }
 .seg-small { flex: none; gap: 2px; padding: 3px; border-radius: 10px; }
 .seg-small button { flex: none; min-height: 42px; padding: 0 12px; border-radius: 8px; font-size: 15px; }
-.big-result { background: var(--accent-soft); margin-top: 12px; }
-.big-result strong { font-size: 28px; line-height: 1.2; color: var(--accent-strong); }
+.big-result { background: var(--accent-soft); margin-top: 16px; padding: 16px 18px; }
+.big-result span { font-size: 19px; }
+.big-result strong { font-size: 38px; line-height: 1.1; color: var(--accent-strong); }
 .big-result.negative { background: var(--danger-soft); }
 .big-result.negative strong { color: var(--danger); }
 .price-out p { margin: 8px 2px 0; font-size: 15px; }

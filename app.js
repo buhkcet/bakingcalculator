@@ -1261,35 +1261,43 @@ function updateCalcOutputs() {
       <tr><th>Labour<small>${minutesLabel(b.labourMin)} × <a href="#overhead">${money(s.labour_rate_per_hr)}/h</a></small></th><td>${money(b.labour)}</td></tr>
       <tr><th>Packaging<small>${plural(b.packCount, 'item')}</small></th><td>${money(b.packaging)}</td></tr>
       <tr><th>Misc</th><td>${money(b.misc)}</td></tr>
-    </table>
+    </table>`;
+  // The headline result comes first, then what it costs, then what it earns.
+  const { result, profit } = priceOutputHTML(b);
+  out.innerHTML = `
+    ${result}
     <div class="stat-pair">
       <div><span>Batch cost</span><strong>${money(b.total)}</strong></div>
       <div><span>Per serving <em>(${qty(b.recipe.yield_units)})</em></span><strong>${money(b.perUnit)}</strong></div>
-    </div>`;
-  out.innerHTML = priceOutputHTML(b);
+    </div>
+    ${profit}`;
 }
 
+/** The selling price (or margin) box, or a message saying what's missing, plus the profit pair when there is one. */
 function priceOutputHTML(b) {
   const cost = b.perUnit;
   const units = b.recipe.yield_units;
-  if (!Number.isFinite(cost)) return '<p class="placeholder">Fix the inputs above to see a price.</p>';
+  const message = (html) => ({ result: html, profit: '' });
+  if (!Number.isFinite(cost)) return message('<p class="placeholder">Fix the inputs above to see a price.</p>');
 
   if (calc.mode === 'margin') {
     const m = parseNum(calc.margin);
-    if (!Number.isFinite(m)) return '<p class="neg-text">Enter a margin, for example 30.</p>';
-    if (m >= 100) return '<p class="neg-text">Margin must be below 100%.</p>';
+    if (!Number.isFinite(m)) return message('<p class="neg-text">Enter a margin, for example 30.</p>');
+    if (m >= 100) return message('<p class="neg-text">Margin must be below 100%.</p>');
     const price = cost / (1 - m / 100);
-    return `
-      <div class="big-result"><span>Selling price</span><strong>${money(price)}</strong></div>
-      ${profitRowHTML(price - cost, units)}`;
+    return {
+      result: `<div class="big-result"><span>Selling price</span><strong>${money(price)}</strong></div>`,
+      profit: profitRowHTML(price - cost, units),
+    };
   }
 
   const price = parseNum(calc.price);
-  if (!(price > 0)) return '<p class="muted">Enter a selling price to see your margin.</p>';
+  if (!(price > 0)) return message('<p class="muted">Enter a selling price to see your margin.</p>');
   const margin = ((price - cost) / price) * 100;
-  return `
-    <div class="big-result${margin < 0 ? ' negative' : ''}"><span>Margin</span><strong>${pct(margin)}</strong></div>
-    ${profitRowHTML(price - cost, units)}`;
+  return {
+    result: `<div class="big-result${margin < 0 ? ' negative' : ''}"><span>Margin</span><strong>${pct(margin)}</strong></div>`,
+    profit: profitRowHTML(price - cost, units),
+  };
 }
 
 /** Profit (or loss) per serving and per batch, side by side. */
