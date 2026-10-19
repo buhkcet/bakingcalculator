@@ -352,11 +352,66 @@ table.list .desc { color: var(--muted); font-size: 15px; }
 .detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .detail-head p { margin: 4px 0 0; }
 .detail-name { font-size: 24px; }
-.editor-title { margin-bottom: 16px; }
 .detail-actions { display: flex; align-items: center; gap: 4px; flex: none; }
 .recipe-view .table-wrap { margin-top: 4px; }
 .recipe-view tr.missing-row td { color: var(--warn-ink); }
-.cost-cta { display: flex; justify-content: flex-end; margin-top: 16px; }
+.cost-cta { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+
+/* Editing happens in the same card: fields keep the look of the text they replace. */
+.edit-head { flex: 1; min-width: 0; }
+.name-edit { display: flex; align-items: center; gap: 8px; }
+.recipe-view input.detail-name, .recipe-view input.inline-num {
+  min-height: 0;
+  border: 0;
+  border-bottom: 2px dashed var(--border);
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+}
+.recipe-view input.detail-name { flex: 1; min-width: 0; padding: 2px 4px; margin-left: -4px; font-size: 24px; }
+/* Where supported, the name field hugs its text so the ✎ sits right after it. */
+@supports (field-sizing: content) {
+  .recipe-view input.detail-name { flex: 0 1 auto; width: auto; field-sizing: content; min-width: 6ch; }
+}
+.recipe-view input.inline-num { width: 3.6em; padding: 0 4px; font-size: 17px; text-align: center; }
+.recipe-view input.detail-name:hover, .recipe-view input.inline-num:hover { border-bottom-color: var(--muted); }
+.recipe-view input.detail-name:focus, .recipe-view input.inline-num:focus { border-bottom-color: transparent; background: var(--surface-2); }
+.recipe-view input.inline-num.invalid { background: var(--danger-soft); border-bottom-color: var(--danger); }
+.edit-icon { color: var(--muted); font-size: 18px; flex: none; }
+
+.edit-table td { padding: 6px 10px; }
+.edit-table td:first-child { padding-left: 0; }
+.edit-table select, .edit-table input {
+  min-height: 42px;
+  border-color: transparent;
+  background-color: var(--surface-2);
+}
+.edit-table select { min-width: 0; }
+.edit-table .amount { justify-content: flex-end; }
+.edit-table .amount input { flex: 0 1 6em; text-align: right; }
+.edit-table .amount .unit { min-width: 1.6em; text-align: left; }
+.edit-table .remove-col { width: 1%; padding: 0; }
+.edit-table .icon-btn { width: 36px; height: 36px; font-size: 15px; }
+.edit-table .line-missing { margin: 2px 0; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  margin-top: 10px;
+  padding: 0 14px;
+  border: 1px dashed var(--accent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.chip:active { background: var(--accent-soft); }
 
 .back-btn { display: none; margin: -6px 0 8px -12px; }
 
@@ -367,11 +422,10 @@ table.list .desc { color: var(--muted); font-size: 15px; }
   .back-btn { display: inline-flex; }
 }
 
-/* Recipe lines inside the narrower detail pane. */
-@container (max-width: 520px) {
-  .split-detail .line { grid-template-columns: minmax(0, 1fr) 44px; }
-  .split-detail .line > select { grid-column: 1 / -1; }
-  .split-detail .line .line-cost { display: none; }
+/* In a narrow detail pane, drop the per-line cost while editing; the per-unit total still updates. */
+@container (max-width: 480px) {
+  .edit-table .cost-col { display: none; }
+  .edit-table .amount input { flex-basis: 4.5em; }
   .split-detail .line-missing { grid-template-columns: minmax(0, 1fr) auto; }
   .split-detail .line-missing .missing-label { grid-column: 1 / -1; }
 }
@@ -452,9 +506,6 @@ table.list td.menu-cell { width: 1%; padding: 2px 0 2px 4px; text-align: right; 
   .line-missing { grid-template-columns: minmax(0, 1fr) auto; }
   .line-missing .missing-label { grid-column: 1 / -1; }
 }
-
-.draft-total { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--border); }
-.form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 
 /* ---------- Calculator ---------- */
 

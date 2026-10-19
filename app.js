@@ -810,57 +810,68 @@ function recipeViewHTML(r) {
     </article>`;
 }
 
+/** The same card as recipeViewHTML, with the name, yield and ingredient rows made editable in place. */
 function recipeEditorHTML() {
   const opts = activeIngredients();
   return `
-    <div class="card">
+    <article class="card recipe-view editing">
       <button class="btn btn-ghost back-btn" data-action="recipe-cancel">‹ Cancel</button>
-      <h2 class="detail-name editor-title">${draft.isNew ? 'New recipe' : 'Edit recipe'}</h2>
-      <div class="field-row">
-        <label class="field grow"><span>Recipe name</span>
-          <input data-draft="name" value="${esc(draft.name)}" autocomplete="off" autocapitalize="words" placeholder="e.g. Vanilla cupcakes"></label>
-        <label class="field"><span>Yield (units per batch)</span>
-          <input data-draft="yieldText" inputmode="decimal" autocomplete="off" value="${esc(draft.yieldText)}" placeholder="e.g. 12"></label>
+      <div class="detail-head">
+        <div class="edit-head">
+          <label class="name-edit">
+            <input class="detail-name" data-draft="name" value="${esc(draft.name)}" autocomplete="off" autocapitalize="words" placeholder="Recipe name" aria-label="Recipe name">
+            <span class="edit-icon" aria-hidden="true">✎</span>
+          </label>
+          <p class="muted">Makes <input class="inline-num" data-draft="yieldText" inputmode="decimal" autocomplete="off" value="${esc(draft.yieldText)}" placeholder="12" aria-label="Units per batch"> <span id="draft-units">units</span> per batch</p>
+        </div>
       </div>
-      <h3 class="section-title">Ingredients</h3>
       ${opts.length ? '' : '<p class="hint">You have no ingredients yet. <a href="#ingredients">Add some</a> — this draft will be kept while you do.</p>'}
-      <div class="lines">${draft.lines.map((l, i) => recipeLineHTML(l, i, opts)).join('')}</div>
-      <button class="btn" data-action="line-add">+ Add ingredient</button>
-      <div class="draft-total" id="draft-total"></div>
+      <div class="table-wrap">
+        <table class="list edit-table">
+          <thead><tr><th>Ingredient</th><th class="num">Amount</th><th class="num cost-col">Cost</th><th class="remove-col"></th></tr></thead>
+          <tbody>${draft.lines.map((l, i) => recipeLineHTML(l, i, opts)).join('')}</tbody>
+        </table>
+      </div>
+      <button class="chip" data-action="line-add">+ Add ingredient</button>
+      <div class="per-unit">
+        <span>Ingredients per unit<small id="draft-batch"></small></span>
+        <strong id="draft-unit"></strong>
+      </div>
       <p class="form-error" id="draft-error" role="alert" hidden></p>
-      <div class="form-actions">
+      <div class="cost-cta">
         <button class="btn" data-action="recipe-cancel">Cancel</button>
         <button class="btn btn-primary" data-action="recipe-save">Save recipe</button>
       </div>
-    </div>`;
+    </article>`;
 }
-
 
 function recipeLineHTML(line, i, opts) {
   const ing = line.ingredient_id ? findIngredient(line.ingredient_id) : null;
   if (line.ingredient_id && (!ing || ing.deleted)) {
     return `
-      <div class="line line-missing">
-        <div class="missing-label"><span class="badge-warn">Missing</span> ${esc(ing ? ing.name : 'Unknown ingredient')}
-          <span class="muted">· ${esc(line.amountText)} ${ing ? unitLabel(ing.unit) : ''}</span></div>
-        <select data-line="replace" data-idx="${i}" aria-label="Replace with another ingredient">
-          <option value="">Replace with…</option>${options(opts, '')}
-        </select>
-        <button class="btn btn-small" data-action="line-remove" data-idx="${i}">Remove</button>
-      </div>`;
+      <tr class="missing-row"><td colspan="4">
+        <div class="line-missing">
+          <div class="missing-label"><span class="badge-warn">Missing</span> ${esc(ing ? ing.name : 'Unknown ingredient')}
+            <span class="muted">· ${esc(line.amountText)} ${ing ? unitLabel(ing.unit) : ''}</span></div>
+          <select data-line="replace" data-idx="${i}" aria-label="Replace with another ingredient">
+            <option value="">Replace with…</option>${options(opts, '')}
+          </select>
+          <button class="btn btn-small" data-action="line-remove" data-idx="${i}">Remove</button>
+        </div>
+      </td></tr>`;
   }
   return `
-    <div class="line">
-      <select data-line="ingredient" data-idx="${i}" aria-label="Ingredient">
-        <option value="">Choose ingredient…</option>${options(opts, line.ingredient_id)}
-      </select>
-      <div class="amount">
-        <input data-line="amount" data-idx="${i}" inputmode="decimal" autocomplete="off" value="${esc(line.amountText)}" placeholder="Amount" aria-label="Amount">
+    <tr>
+      <td><select data-line="ingredient" data-idx="${i}" aria-label="Ingredient">
+        <option value="">Choose…</option>${options(opts, line.ingredient_id)}
+      </select></td>
+      <td class="num"><div class="amount">
+        <input data-line="amount" data-idx="${i}" inputmode="decimal" autocomplete="off" value="${esc(line.amountText)}" placeholder="0" aria-label="Amount">
         <span class="unit">${ing ? unitLabel(ing.unit) : ''}</span>
-      </div>
-      <span class="line-cost" data-cost-idx="${i}"></span>
-      <button class="icon-btn" data-action="line-remove" data-idx="${i}" aria-label="Remove line">✕</button>
-    </div>`;
+      </div></td>
+      <td class="num cost-col" data-cost-idx="${i}"></td>
+      <td class="remove-col"><button class="icon-btn" data-action="line-remove" data-idx="${i}" aria-label="Remove ingredient">✕</button></td>
+    </tr>`;
 }
 
 function updateDraftTotals() {
@@ -885,9 +896,12 @@ function updateDraftTotals() {
     if (cell) cell.textContent = money(cost);
   });
   const y = parseNum(draft.yieldText);
-  $('#draft-total').innerHTML = `Ingredient cost: <strong class="money">${money(total)}</strong> per batch${
-    y > 0 ? ` · <strong class="money">${money(total / y)}</strong> per unit` : ''}${
-    incomplete ? ' <span class="warn-text">— incomplete, missing ingredients excluded</span>' : ''}`;
+  const yInput = $('[data-draft="yieldText"]');
+  if (yInput) yInput.classList.toggle('invalid', draft.yieldText.trim() !== '' && !(y > 0));
+  $('#draft-units').textContent = y === 1 ? 'unit' : 'units';
+  $('#draft-unit').textContent = y > 0 ? money(total / y) : '—';
+  $('#draft-batch').innerHTML = `${money(total)} per batch${y > 0 ? ` ÷ ${plural(y, 'unit')}` : ''}${
+    incomplete ? ' · <span class="warn-text">incomplete</span>' : ''}`;
 }
 
 function replaceLineIngredient(idx, newIngredientId) {
