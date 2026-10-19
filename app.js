@@ -311,10 +311,11 @@ async function exportData() {
   const file = new File([JSON.stringify(data, null, 2)], name, { type: 'application/json' });
 
   // On iPad the share sheet is the reliable way to "Save to Files" from a Home Screen app.
+  // Share the file alone: iOS saves a title or text as a second .txt file.
   const touch = navigator.maxTouchPoints > 0;
   if (touch && navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: name });
+      await navigator.share({ files: [file] });
       markExported();
       toast('Exported');
       return;
