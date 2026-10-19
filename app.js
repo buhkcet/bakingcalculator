@@ -18,7 +18,9 @@ const DEFAULT_SETTINGS = Object.freeze({
   default_margin_pct: 30,
 });
 
-const TABS = ['ingredients', 'recipes', 'packaging', 'calculator', 'settings'];
+const TABS = ['calculator', 'recipes', 'ingredients', 'overhead', 'settings'];
+/** Old tab addresses that now live elsewhere. */
+const TAB_REDIRECTS = { packaging: 'overhead' };
 
 /* =========================================================
    Helpers
@@ -536,32 +538,62 @@ async function deleteIngredient(id) {
 }
 
 /* =========================================================
-   Packaging
+   Overhead: the rates, packaging and pricing default the calculator adds to a batch
    ========================================================= */
 
-function renderPackaging(view) {
+const SETTING_FIELDS = [
+  { key: 'labour_rate_per_hr', group: 'rates', label: 'Labour rate', pre: '$', post: 'per hour', hint: 'What you pay yourself or staff for an hour of work.' },
+  { key: 'electricity_per_kwh', group: 'rates', label: 'Electricity price', pre: '$', post: 'per kWh', hint: 'The per-kWh rate on your power bill.' },
+  { key: 'oven_kw', group: 'rates', label: 'Oven power', pre: '', post: 'kW', hint: "On the oven's rating plate or manual. Many home ovens are 2–3.5 kW." },
+  { key: 'default_margin_pct', group: 'pricing', label: 'Default margin', pre: '', post: '%', hint: 'The calculator starts here. Margin is a percentage of the selling price.' },
+];
+
+function settingFieldsHTML(group) {
+  return `
+    <div class="settings-grid">
+      ${SETTING_FIELDS.filter((f) => f.group === group).map((f) => `
+        <label class="field"><span>${esc(f.label)}</span>
+          <div class="amount">${f.pre ? `<span class="pre">${f.pre}</span>` : ''}<input data-setting="${f.key}" inputmode="decimal" autocomplete="off" value="${data.settings[f.key]}"><span class="unit">${esc(f.post)}</span></div>
+          <small class="hint">${esc(f.hint)}</small>
+          <small class="field-error" data-setting-error="${f.key}" hidden></small>
+        </label>`).join('')}
+    </div>`;
+}
+
+function renderOverhead(view) {
   const list = activePackaging();
   view.innerHTML = `
-    <div class="view-head">
-      <h1>Packaging</h1>
-      <button class="btn btn-primary" data-action="pkg-add">+ Add packaging</button>
-    </div>
-    ${list.length ? `
-      <div class="card table-wrap">
-        <table class="list">
-          <thead><tr><th>Name</th><th class="num">Price each</th><th></th></tr></thead>
-          <tbody>
-            ${list.map((p) => `
-              <tr class="tap-row" data-action="pkg-edit" data-id="${esc(p.id)}">
-                <td><div class="name">${esc(p.name)}</div>${p.description ? `<div class="desc">${esc(p.description)}</div>` : ''}</td>
-                <td class="num">${money(p.price)}</td>
-                <td class="menu-cell">${optionsMenu('pkg', p)}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>`
-    : emptyState('No packaging yet', 'Add boxes, bags, labels and liners with the price of one item. You pick them per batch in the calculator.',
-      '<button class="btn btn-primary" data-action="pkg-add">+ Add packaging</button>')}`;
+    <div class="view-head"><h1>Overhead</h1><span class="saved-note" id="saved-note" hidden>Saved</span></div>
+    <section class="card">
+      <h2 class="section-title">Rates</h2>
+      ${settingFieldsHTML('rates')}
+    </section>
+    <section class="card">
+      <div class="card-head">
+        <h2 class="section-title">Packaging</h2>
+        <button class="btn btn-small" data-action="pkg-add">+ Add packaging</button>
+      </div>
+      ${list.length ? `
+        <div class="table-wrap">
+          <table class="list">
+            <thead><tr><th>Name</th><th class="num">Price each</th><th></th></tr></thead>
+            <tbody>
+              ${list.map((p) => `
+                <tr class="tap-row" data-action="pkg-edit" data-id="${esc(p.id)}">
+                  <td><div class="name">${esc(p.name)}</div>${p.description ? `<div class="desc">${esc(p.description)}</div>` : ''}</td>
+                  <td class="num">${money(p.price)}</td>
+                  <td class="menu-cell">${optionsMenu('pkg', p)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`
+      : '<p class="hint">Add boxes, bags, labels and liners with the price of one item. You pick them per batch in the calculator.</p>'}
+    </section>
+    <section class="card">
+      <h2 class="section-title">Pricing</h2>
+      ${settingFieldsHTML('pricing')}
+    </section>
+    <p class="hint page-note">Rates and pricing save as you type.</p>`;
 }
 
 function editPackaging(id) {
@@ -1094,7 +1126,7 @@ function renderCalculator(view) {
             </div>`).join('')}</div>` : ''}
           ${packOpts.length
             ? '<div><button class="btn" data-action="calc-pack-add">+ Add packaging</button></div>'
-            : '<p class="hint">No packaging items yet. <a href="#packaging">Add them in Packaging</a>.</p>'}
+            : '<p class="hint">No packaging items yet. <a href="#overhead">Add them in Overhead</a>.</p>'}
         </div>
         <label class="field"><span>Misc cost</span>
           <div class="amount"><span class="pre">$</span><input data-calc="misc" inputmode="decimal" autocomplete="off" value="${esc(calc.misc)}" placeholder="0.00"></div></label>
@@ -1166,8 +1198,8 @@ function updateCalcOutputs() {
     <h2 class="section-title">Batch cost · ${esc(b.recipe.name)}</h2>
     <table class="breakdown">
       <tr><th>Ingredients${missing.length ? ' <span class="badge-warn">incomplete</span>' : ''}</th><td>${money(b.ing.total)}</td></tr>
-      <tr><th>Electricity<small>${qty(b.bakeMin)} min × ${qty(s.oven_kw)} kW × ${fineMoney(s.electricity_per_kwh)}/kWh</small></th><td>${money(b.electricity)}</td></tr>
-      <tr><th>Labour<small>${qty(b.hours)} h × ${money(s.labour_rate_per_hr)}/h</small></th><td>${money(b.labour)}</td></tr>
+      <tr><th>Electricity<small>${qty(b.bakeMin)} min × ${qty(s.oven_kw)} kW × <a href="#overhead">${fineMoney(s.electricity_per_kwh)}/kWh</a></small></th><td>${money(b.electricity)}</td></tr>
+      <tr><th>Labour<small>${qty(b.hours)} h × <a href="#overhead">${money(s.labour_rate_per_hr)}/h</a></small></th><td>${money(b.labour)}</td></tr>
       <tr><th>Packaging<small>${plural(b.packCount, 'item')}</small></th><td>${money(b.packaging)}</td></tr>
       <tr><th>Misc</th><td>${money(b.misc)}</td></tr>
       <tr class="total"><th>Total batch cost</th><td>${money(b.total)}</td></tr>
@@ -1208,31 +1240,12 @@ function priceOutputHTML(b) {
    Settings
    ========================================================= */
 
-const SETTING_FIELDS = [
-  { key: 'labour_rate_per_hr', label: 'Labour rate', pre: '$', post: 'per hour', hint: 'What you pay yourself or staff for an hour of work.' },
-  { key: 'electricity_per_kwh', label: 'Electricity price', pre: '$', post: 'per kWh', hint: 'The per-kWh rate on your power bill.' },
-  { key: 'oven_kw', label: 'Oven power', pre: '', post: 'kW', hint: "On the oven's rating plate or manual. Many home ovens are 2–3.5 kW." },
-  { key: 'default_margin_pct', label: 'Default margin', pre: '', post: '%', hint: 'The calculator starts here. Margin is a percentage of the selling price.' },
-];
-
 function renderSettings(view) {
   const exp = lastExportInfo();
   const counts = `${plural(data.ingredients.filter((i) => !i.deleted).length, 'ingredient')}, ${
     plural(data.packaging.filter((p) => !p.deleted).length, 'packaging item')}, ${plural(data.recipes.length, 'recipe')}`;
   view.innerHTML = `
-    <div class="view-head"><h1>Settings</h1><span class="saved-note" id="saved-note" hidden>Saved</span></div>
-    <section class="card">
-      <h2 class="section-title">Costs</h2>
-      <div class="settings-grid">
-        ${SETTING_FIELDS.map((f) => `
-          <label class="field"><span>${esc(f.label)}</span>
-            <div class="amount">${f.pre ? `<span class="pre">${f.pre}</span>` : ''}<input data-setting="${f.key}" inputmode="decimal" autocomplete="off" value="${data.settings[f.key]}"><span class="unit">${esc(f.post)}</span></div>
-            <small class="hint">${esc(f.hint)}</small>
-            <small class="field-error" data-setting-error="${f.key}" hidden></small>
-          </label>`).join('')}
-      </div>
-      <p class="hint">Changes save as you type.</p>
-    </section>
+    <div class="view-head"><h1>Settings</h1></div>
     <section class="card">
       <h2 class="section-title">Your data</h2>
       <p class="export-status${exp.stale && hasAnyData() ? ' stale' : ''}">Last exported: <strong>${esc(exp.text)}</strong></p>
@@ -1287,7 +1300,7 @@ const VIEWS = {
   calculator: renderCalculator,
   recipes: renderRecipes,
   ingredients: renderIngredients,
-  packaging: renderPackaging,
+  overhead: renderOverhead,
   settings: renderSettings,
 };
 
@@ -1297,6 +1310,8 @@ function currentTab() {
 }
 
 function render() {
+  const moved = TAB_REDIRECTS[location.hash.slice(1)];
+  if (moved) history.replaceState(null, '', `#${moved}`);
   const tab = currentTab();
   $$('.app-header [data-tab]').forEach((a) => {
     const active = a.dataset.tab === tab;
