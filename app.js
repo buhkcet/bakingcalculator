@@ -1261,9 +1261,11 @@ function updateCalcOutputs() {
       <tr><th>Labour<small>${minutesLabel(b.labourMin)} × <a href="#overhead">${money(s.labour_rate_per_hr)}/h</a></small></th><td>${money(b.labour)}</td></tr>
       <tr><th>Packaging<small>${plural(b.packCount, 'item')}</small></th><td>${money(b.packaging)}</td></tr>
       <tr><th>Misc</th><td>${money(b.misc)}</td></tr>
-      <tr class="total"><th>Total batch cost</th><td>${money(b.total)}</td></tr>
-      <tr class="total per-serving"><th>Cost per serving<small>÷ ${plural(b.recipe.yield_units, 'serving')}</small></th><td>${money(b.perUnit)}</td></tr>
-    </table>`;
+    </table>
+    <div class="stat-pair">
+      <div><span>Batch cost</span><strong>${money(b.total)}</strong></div>
+      <div><span>Per serving</span><strong>${money(b.perUnit)}</strong><small>÷ ${plural(b.recipe.yield_units, 'serving')}</small></div>
+    </div>`;
   out.innerHTML = priceOutputHTML(b);
 }
 
@@ -1295,7 +1297,7 @@ function profitRowHTML(perServing, units) {
   const loss = perServing < 0;
   const word = loss ? 'Loss' : 'Profit';
   return `
-    <div class="profit-row${loss ? ' loss' : ''}">
+    <div class="stat-pair profit-row${loss ? ' loss' : ''}">
       <div><span>${word} per serving</span><strong>${money(Math.abs(perServing))}</strong></div>
       <div><span>${word} per batch</span><strong>${money(Math.abs(perServing * units))}</strong></div>
     </div>`;

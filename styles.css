@@ -540,9 +540,6 @@ table.breakdown th { text-align: left; font-weight: 600; padding: 8px 0; }
 table.breakdown th small { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
 table.breakdown td { text-align: right; padding: 8px 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
 table.breakdown tr + tr th, table.breakdown tr + tr td { border-top: 1px solid var(--border); }
-table.breakdown tr.total th, table.breakdown tr.total td { border-top: 2px solid var(--text); font-weight: 700; font-size: 18px; }
-table.breakdown tr.per-serving th, table.breakdown tr.per-serving td { border-top: 1px solid var(--border); }
-table.breakdown tr.per-serving td { font-size: 22px; }
 
 .big-result {
   display: flex;
@@ -555,7 +552,7 @@ table.breakdown tr.per-serving td { font-size: 22px; }
 .big-result span { font-weight: 600; }
 .big-result strong { font-variant-numeric: tabular-nums; }
 
-.pricing { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
+.pricing { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
 /* Mode toggle and the value it sets share one row under the heading. */
 .price-input-row { display: flex; align-items: center; gap: 10px; }
 .price-input-row .amount { flex: 1; }
@@ -566,10 +563,13 @@ table.breakdown tr.per-serving td { font-size: 22px; }
 .big-result.negative { background: var(--danger-soft); }
 .big-result.negative strong { color: var(--danger); }
 .price-out p { margin: 8px 2px 0; font-size: 15px; }
-.profit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-.profit-row > div { padding: 10px 14px; border-radius: 12px; background: var(--surface-2); }
-.profit-row span { display: block; font-size: 13px; font-weight: 600; color: var(--muted); }
-.profit-row strong { font-size: 22px; color: var(--ok); font-variant-numeric: tabular-nums; }
+/* Two results side by side: batch/per-serving cost, and profit. */
+.stat-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.stat-pair > div { padding: 10px 14px; border-radius: 12px; background: var(--surface-2); }
+.stat-pair span, .stat-pair small { display: block; font-size: 13px; color: var(--muted); }
+.stat-pair span { font-weight: 600; }
+.stat-pair strong { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+.profit-row strong { color: var(--ok); }
 .profit-row.loss strong { color: var(--danger); }
 
 /* ---------- Overhead & Settings ---------- */
