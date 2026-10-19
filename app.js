@@ -1190,10 +1190,11 @@ function renderCalculator(view) {
             ? '<div><button class="btn" data-action="calc-pack-add">+ Add packaging</button></div>'
             : '<p class="hint">No packaging items yet. <a href="#overhead">Add them in Overhead</a>.</p>'}
         </div>
+        <div class="field" id="calc-pricing">${pricingHTML()}</div>
       </section>
       <section class="card results" aria-label="Results">
         <div id="calc-breakdown"></div>
-        <div class="pricing" id="calc-pricing">${pricingHTML()}</div>
+        <div class="price-out" id="calc-price-out" aria-live="polite"></div>
       </section>
     </div>`;
   updateCalcOutputs();
@@ -1202,7 +1203,7 @@ function renderCalculator(view) {
 function pricingHTML() {
   const marginMode = calc.mode === 'margin';
   return `
-    <h2 class="section-title">Price per serving</h2>
+    <span>Price per serving</span>
     <div class="price-input-row">
       <div class="seg seg-small" role="group" aria-label="What you set">
         <button type="button" class="${marginMode ? 'on' : ''}" aria-pressed="${marginMode}" data-action="calc-mode" data-mode="margin" title="Set a margin, see the price">Margin</button>
@@ -1211,8 +1212,7 @@ function pricingHTML() {
       ${marginMode
         ? `<label class="amount inset"><input data-calc="margin" inputmode="decimal" autocomplete="off" value="${esc(calc.margin)}" aria-label="Margin, as a percentage of the selling price"><span class="unit">%</span></label>`
         : `<label class="amount inset"><span class="pre">$</span><input data-calc="price" inputmode="decimal" autocomplete="off" value="${esc(calc.price)}" placeholder="e.g. 3.50" aria-label="Selling price per serving"></label>`}
-    </div>
-    <div class="price-out" id="calc-price-out" aria-live="polite"></div>`;
+    </div>`;
 }
 
 function updateCalcOutputs() {

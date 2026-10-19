@@ -552,7 +552,7 @@ table.breakdown tr + tr th, table.breakdown tr + tr td { border-top: 1px solid v
 .big-result span { font-weight: 600; }
 .big-result strong { font-variant-numeric: tabular-nums; }
 
-.pricing { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.calc-grid .card > .field:last-child { margin-bottom: 0; }
 /* Mode toggle and the value it sets share one row under the heading. */
 .price-input-row { display: flex; align-items: center; gap: 10px; }
 .price-input-row .amount { flex: 1; }
