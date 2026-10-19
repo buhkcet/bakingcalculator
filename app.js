@@ -1255,7 +1255,6 @@ function updateCalcOutputs() {
     ${b.errors.length ? `
       <div class="alert alert-error">Check the ${b.errors.map(esc).join(', ')}. Use plain numbers like 2.5${
         b.errors.some((e) => e.endsWith(' time')) ? ' (times can also be h:mm, like 1:30)' : ''}.</div>` : ''}
-    <h2 class="section-title">Batch cost · ${esc(b.recipe.name)}</h2>
     <table class="breakdown">
       <tr><th>Ingredients${missing.length ? ' <span class="badge-warn">incomplete</span>' : ''}</th><td>${money(b.ing.total)}</td></tr>
       <tr><th>Electricity<small>${minutesLabel(b.bakeMin)} × ${qty(s.oven_kw)} kW × <a href="#overhead">${fineMoney(s.electricity_per_kwh)}/kWh</a></small></th><td>${money(b.electricity)}</td></tr>
