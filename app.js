@@ -724,20 +724,17 @@ async function confirmLeaveDraft() {
 /** True when the list and the recipe show one at a time (phones); otherwise they sit side by side. */
 const isNarrow = () => window.matchMedia('(max-width: 700px)').matches;
 
+const RECIPE_LIST_ROWS = 5;
+
 /**
- * Side by side, the recipe list scrolls on its own. Size it from where it actually sits on screen,
- * so its bottom is always visible: before the page scrolls it starts below the page title, not under the header.
+ * Side by side, the recipe list shows at most five recipes and scrolls inside its card for the rest.
+ * Rows vary in height (long names wrap), so the cap is measured from the sixth row.
  */
 function fitRecipeList() {
   const list = $('.split-list');
   if (!list) return;
-  if (isNarrow()) {
-    list.style.maxHeight = '';
-    return;
-  }
-  const viewHeight = window.visualViewport?.height || window.innerHeight;
-  const top = Math.max(0, list.getBoundingClientRect().top);
-  list.style.maxHeight = `${Math.max(200, viewHeight - top - 16)}px`;
+  const next = list.children[RECIPE_LIST_ROWS];
+  list.style.maxHeight = !isNarrow() && next ? `${next.offsetTop}px` : '';
 }
 
 function showRecipesTab() {
@@ -830,7 +827,13 @@ function renderRecipes(view) {
       </section>
     </div>`;
   fitRecipeList();
-  $('.split-list').scrollTop = listScroll;
+  const list = $('.split-list');
+  list.scrollTop = listScroll;
+  // If the selected recipe is out of sight in the list (say, opened from the calculator), bring it into view.
+  const sel = list.querySelector('.recipe-item.selected');
+  if (sel && (sel.offsetTop < list.scrollTop || sel.offsetTop + sel.offsetHeight > list.scrollTop + list.clientHeight)) {
+    list.scrollTop = sel.offsetTop - 6;
+  }
   if (draft) updateDraftTotals();
 }
 
@@ -1603,12 +1606,6 @@ function init() {
   data = loadData();
   requestPersistentStorage();
 
-  // The sticky recipe list sits just under the header, whatever height the header wraps to.
-  const header = $('.app-header');
-  new ResizeObserver(() => {
-    document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
-  }).observe(header);
-
   const view = $('#view');
   view.addEventListener('click', onViewClick);
   view.addEventListener('input', onViewInput);
@@ -1623,15 +1620,7 @@ function init() {
   // Menus are fixed-position, so close them rather than let them drift.
   window.addEventListener('scroll', closeMenus, { passive: true });
   window.addEventListener('resize', closeMenus);
-  let fitQueued = false;
-  const queueFit = () => {
-    if (fitQueued) return;
-    fitQueued = true;
-    requestAnimationFrame(() => { fitQueued = false; fitRecipeList(); });
-  };
-  window.addEventListener('scroll', queueFit, { passive: true });
-  window.addEventListener('resize', queueFit);
-  window.visualViewport?.addEventListener('resize', queueFit);
+  window.addEventListener('resize', fitRecipeList); // wrapping names change row heights
   window.addEventListener('hashchange', () => {
     render();
     window.scrollTo(0, 0);

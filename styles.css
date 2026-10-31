@@ -343,16 +343,9 @@ table.list .desc { color: var(--muted); font-size: 15px; }
 .split-detail { min-width: 0; container-type: inline-size; }
 
 .split-list { display: flex; flex-direction: column; gap: 2px; padding: 6px; }
-/* Side by side, the list scrolls on its own and stays under the header, so the page doesn't grow with it. */
+/* Side by side, the list caps at five recipes (fitRecipeList) and scrolls inside the card for the rest. */
 @media (min-width: 701px) {
-  .split-list {
-    position: sticky;
-    top: calc(var(--header-h, 120px) + 16px);
-    max-height: calc(100dvh - var(--header-h, 120px) - 32px); /* fallback; fitRecipeList() sets the real height */
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-  /* The list scrolls rather than squeezing its items, so two-line names keep their height. */
+  .split-list { position: relative; overflow-y: auto; overscroll-behavior: contain; }
   .split-list > * { flex-shrink: 0; }
 }
 .recipe-item {
