@@ -721,10 +721,14 @@ async function confirmLeaveDraft() {
   return true;
 }
 
+/** True when the list and the recipe show one at a time (phones); otherwise they sit side by side. */
+const isNarrow = () => window.matchMedia('(max-width: 700px)').matches;
+
 function showRecipesTab() {
   if (location.hash !== '#recipes') location.hash = 'recipes';
   else render();
-  // Bring the detail into view if the page was scrolled down the list.
+  // Side by side, the list scrolls on its own, so leave the page where it is.
+  if (!isNarrow()) return;
   const detail = $('.split-detail');
   if (!detail || detail.getBoundingClientRect().top < 0 || recipeUI.detailOpen) window.scrollTo(0, 0);
 }
@@ -789,6 +793,7 @@ function renderRecipes(view) {
     return;
   }
 
+  const listScroll = $('.split-list')?.scrollTop || 0; // redrawing the list shouldn't lose your place in it
   const showDetail = recipeUI.detailOpen || !!draft;
   const activeId = draft ? draft.id : recipeUI.selectedId;
   const selected = findRecipe(recipeUI.selectedId);
@@ -808,6 +813,7 @@ function renderRecipes(view) {
         ${draft?.isNew ? '' : notesCardHTML(findRecipe(draft ? draft.id : recipeUI.selectedId))}
       </section>
     </div>`;
+  $('.split-list').scrollTop = listScroll;
   if (draft) updateDraftTotals();
 }
 
@@ -1579,6 +1585,12 @@ function onViewInput(e) {
 function init() {
   data = loadData();
   requestPersistentStorage();
+
+  // The sticky recipe list sits just under the header, whatever height the header wraps to.
+  const header = $('.app-header');
+  new ResizeObserver(() => {
+    document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
+  }).observe(header);
 
   const view = $('#view');
   view.addEventListener('click', onViewClick);
