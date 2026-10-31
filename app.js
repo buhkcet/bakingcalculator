@@ -216,6 +216,7 @@ function validateData(obj) {
     for (const key of RECIPE_TIMES) {
       if (r[key] !== undefined && (!isNum(r[key]) || r[key] < 0)) return fail(`${w}.${key} must be 0 or more`);
     }
+    if (r.notes !== undefined && !isStr(r.notes)) return fail(`${w}.notes must be text`);
   }
 
   return { ok: true };
@@ -799,6 +800,7 @@ function renderRecipes(view) {
       </nav>
       <section class="split-detail">
         ${draft ? recipeEditorHTML() : selected ? recipeViewHTML(selected) : ''}
+        ${draft?.isNew ? '' : notesCardHTML(findRecipe(draft ? draft.id : recipeUI.selectedId))}
       </section>
     </div>`;
   if (draft) updateDraftTotals();
@@ -854,6 +856,19 @@ function recipeViewHTML(r) {
         <button class="btn btn-ghost" data-action="recipe-cost" data-id="${esc(r.id)}">Cost this batch →</button>
       </div>
     </article>`;
+}
+
+/** Free-form notes for one recipe, saved as you type, whether or not the recipe is being edited. */
+function notesCardHTML(r) {
+  if (!r) return '';
+  return `
+    <section class="card recipe-notes">
+      <div class="card-head">
+        <h2 class="section-title">Notes</h2>
+        <span class="saved-note" id="notes-saved" hidden>Saved</span>
+      </div>
+      <textarea data-recipe-notes="${esc(r.id)}" rows="4" placeholder="Method, oven temperature, tips…" aria-label="Notes for ${esc(r.name)}">${esc(r.notes)}</textarea>
+    </section>`;
 }
 
 /** The same card as recipeViewHTML, with the name, yield and ingredient rows made editable in place. */
@@ -1000,6 +1015,8 @@ function saveDraft() {
   if (!lines.length) return fail('Add at least one ingredient.');
 
   const recipe = { id: draft.id, name, yield_units: yieldUnits, ...times, ingredients: lines };
+  const notes = findRecipe(draft.id)?.notes;
+  if (notes) recipe.notes = notes; // edited in the notes card, not the draft
   const idx = data.recipes.findIndex((r) => r.id === draft.id);
   if (idx >= 0) data.recipes[idx] = recipe;
   else data.recipes.push(recipe);
@@ -1040,7 +1057,7 @@ function duplicateRecipe(id) {
         yield_units: r.yield_units,
         ingredients: r.ingredients.map((l) => ({ ingredient_id: l.ingredient_id, amount: l.amount })),
       };
-      for (const key of RECIPE_TIMES) if (r[key] !== undefined) copy[key] = r[key];
+      for (const key of [...RECIPE_TIMES, 'notes']) if (r[key] !== undefined) copy[key] = r[key];
       data.recipes.push(copy);
       saveData();
       recipeUI.selectedId = copy.id; // show the new copy
@@ -1538,6 +1555,17 @@ function onViewInput(e) {
     render();
   } else if (el.dataset.line === 'replace') {
     if (el.value) replaceLineIngredient(Number(el.dataset.idx), el.value);
+  } else if (el.dataset.recipeNotes) {
+    const r = findRecipe(el.dataset.recipeNotes);
+    if (!r) return;
+    if (el.value.trim()) r.notes = el.value;
+    else delete r.notes;
+    if (saveData()) {
+      const note = $('#notes-saved');
+      note.hidden = false;
+      clearTimeout(onViewInput.notesTimer);
+      onViewInput.notesTimer = setTimeout(() => { note.hidden = true; }, 1500);
+    }
   } else if (el.dataset.setting) {
     onSettingInput(el);
   }

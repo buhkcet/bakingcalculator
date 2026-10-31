@@ -417,6 +417,24 @@ table.list .desc { color: var(--muted); font-size: 15px; }
 .edit-table tr.new-line select { color: var(--muted); }
 .edit-table tr.new-line input[disabled] { opacity: .45; }
 
+.split-detail > .card + .card { margin-top: 16px; }
+.recipe-notes textarea {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 17px; /* ≥16px stops iOS zooming on focus */
+  line-height: 1.45;
+  resize: vertical;
+  field-sizing: content;
+}
+.recipe-notes textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+
 .back-btn { display: none; margin: -6px 0 8px -12px; }
 
 @media (max-width: 700px) {

@@ -36,6 +36,7 @@ All data lives in one JSON structure, saved to browser storage.
       "yield_units": 12,
       "labour_min": 45,
       "bake_min": 25,
+      "notes": "Bake at 180 °C, rotate halfway.",
       "ingredients": [ { "ingredient_id": "uuid", "amount": 300 } ]
     }
   ]
@@ -46,6 +47,7 @@ Rules:
 - `unit` is either `"g"` or `"each"`. A recipe line's `amount` is in that ingredient's unit.
 - Cost per unit is **derived**, never stored: `pack_price / pack_qty`.
 - Recipes store **only ingredient IDs and amounts**, never costs, so price changes propagate automatically.
+- `notes` is optional free text, edited in a Notes card under the recipe and saved as you type.
 - `labour_min` and `bake_min` are optional (minutes). Recipes saved before they existed simply don't have them; no migration rewrites old data.
 - IDs come from `crypto.randomUUID()`.
 - `version` is there for future migrations.
