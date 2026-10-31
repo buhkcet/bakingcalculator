@@ -348,8 +348,7 @@ table.list .desc { color: var(--muted); font-size: 15px; }
   .split-list {
     position: sticky;
     top: calc(var(--header-h, 120px) + 16px);
-    max-height: calc(100vh - var(--header-h, 120px) - 32px);
-    max-height: calc(100dvh - var(--header-h, 120px) - 32px);
+    max-height: calc(100dvh - var(--header-h, 120px) - 32px); /* fallback; fitRecipeList() sets the real height */
     overflow-y: auto;
     overscroll-behavior: contain;
   }

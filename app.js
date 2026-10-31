@@ -724,6 +724,22 @@ async function confirmLeaveDraft() {
 /** True when the list and the recipe show one at a time (phones); otherwise they sit side by side. */
 const isNarrow = () => window.matchMedia('(max-width: 700px)').matches;
 
+/**
+ * Side by side, the recipe list scrolls on its own. Size it from where it actually sits on screen,
+ * so its bottom is always visible: before the page scrolls it starts below the page title, not under the header.
+ */
+function fitRecipeList() {
+  const list = $('.split-list');
+  if (!list) return;
+  if (isNarrow()) {
+    list.style.maxHeight = '';
+    return;
+  }
+  const viewHeight = window.visualViewport?.height || window.innerHeight;
+  const top = Math.max(0, list.getBoundingClientRect().top);
+  list.style.maxHeight = `${Math.max(200, viewHeight - top - 16)}px`;
+}
+
 function showRecipesTab() {
   if (location.hash !== '#recipes') location.hash = 'recipes';
   else render();
@@ -813,6 +829,7 @@ function renderRecipes(view) {
         ${draft?.isNew ? '' : notesCardHTML(findRecipe(draft ? draft.id : recipeUI.selectedId))}
       </section>
     </div>`;
+  fitRecipeList();
   $('.split-list').scrollTop = listScroll;
   if (draft) updateDraftTotals();
 }
@@ -1606,6 +1623,15 @@ function init() {
   // Menus are fixed-position, so close them rather than let them drift.
   window.addEventListener('scroll', closeMenus, { passive: true });
   window.addEventListener('resize', closeMenus);
+  let fitQueued = false;
+  const queueFit = () => {
+    if (fitQueued) return;
+    fitQueued = true;
+    requestAnimationFrame(() => { fitQueued = false; fitRecipeList(); });
+  };
+  window.addEventListener('scroll', queueFit, { passive: true });
+  window.addEventListener('resize', queueFit);
+  window.visualViewport?.addEventListener('resize', queueFit);
   window.addEventListener('hashchange', () => {
     render();
     window.scrollTo(0, 0);
