@@ -724,11 +724,11 @@ async function confirmLeaveDraft() {
 /** True when the list and the recipe show one at a time (phones); otherwise they sit side by side. */
 const isNarrow = () => window.matchMedia('(max-width: 700px)').matches;
 
-const RECIPE_LIST_ROWS = 5;
+const RECIPE_LIST_ROWS = 8;
 
 /**
- * Side by side, the recipe list shows at most five recipes and scrolls inside its card for the rest.
- * Rows vary in height (long names wrap), so the cap is measured from the sixth row.
+ * Side by side, the recipe list shows at most eight recipes and scrolls inside its card for the rest.
+ * Rows vary in height (long names wrap), so the cap is measured from the ninth row.
  */
 function fitRecipeList() {
   const list = $('.split-list');
