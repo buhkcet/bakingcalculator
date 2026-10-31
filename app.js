@@ -84,6 +84,11 @@ const minutesLabel = (n) => {
 const plural = (n, word) => `${qty(n)} ${word}${n === 1 ? '' : 's'}`;
 const unitLabel = (unit) => (unit === 'g' ? 'g' : 'each');
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+/** Recipe lines in A–Z order of their ingredient's name (a copy; unknown ingredients sort as "Unknown"). */
+const linesByName = (lines) => {
+  const name = (line) => findIngredient(line.ingredient_id)?.name || 'Unknown ingredient';
+  return [...lines].sort((a, b) => byName({ name: name(a) }, { name: name(b) }));
+};
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 function todayStamp() {
@@ -744,7 +749,7 @@ async function startRecipeDraft(id) {
       yieldText: String(r.yield_units),
       labourText: r.labour_min !== undefined ? String(r.labour_min) : '',
       bakeText: r.bake_min !== undefined ? String(r.bake_min) : '',
-      lines: r.ingredients.map((l) => ({ ingredient_id: l.ingredient_id, amountText: String(l.amount) })),
+      lines: linesByName(r.ingredients).map((l) => ({ ingredient_id: l.ingredient_id, amountText: String(l.amount) })),
     }
     : { id: newId(), isNew: true, name: '', yieldText: '', labourText: '', bakeText: '', lines: [] };
   draft.snapshot = draftSnapshot(draft);
@@ -817,7 +822,7 @@ function recipeItemHTML(r, isSelected) {
 
 function recipeViewHTML(r) {
   const c = ingredientCost(r);
-  const lines = r.ingredients.map((line) => {
+  const lines = linesByName(r.ingredients).map((line) => {
     const ing = findIngredient(line.ingredient_id);
     const missing = !ing || ing.deleted;
     return `
@@ -1014,7 +1019,7 @@ function saveDraft() {
   }
   if (!lines.length) return fail('Add at least one ingredient.');
 
-  const recipe = { id: draft.id, name, yield_units: yieldUnits, ...times, ingredients: lines };
+  const recipe = { id: draft.id, name, yield_units: yieldUnits, ...times, ingredients: linesByName(lines) };
   const notes = findRecipe(draft.id)?.notes;
   if (notes) recipe.notes = notes; // edited in the notes card, not the draft
   const idx = data.recipes.findIndex((r) => r.id === draft.id);
