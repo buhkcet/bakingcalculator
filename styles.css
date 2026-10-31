@@ -553,6 +553,9 @@ table.breakdown tr + tr th, table.breakdown tr + tr td { border-top: 1px solid v
 .big-result strong { font-variant-numeric: tabular-nums; }
 
 .calc-grid .card > .field:last-child { margin-bottom: 0; }
+/* Recipe and its servings share a row, even on a phone. */
+.field-row > .field.grow:has(+ .servings-field) { flex: 1 1 160px; }
+.field-row > .servings-field { flex: 0 0 110px; }
 /* Mode toggle and the value it sets share one row under the heading. */
 .price-input-row { display: flex; align-items: center; gap: 10px; }
 .price-input-row .amount { flex: 1; }

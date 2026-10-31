@@ -1075,9 +1075,10 @@ async function deleteRecipe(id) {
 
 const calc = {
   recipeId: '',
+  servings: '', // starts at the recipe's yield; change it for bigger or smaller portions
   labour: '', // minutes
   bake: '', // minutes
-  timesTouched: { labour: false, bake: false }, // typed in, so the recipe's times no longer fill them
+  touched: { servings: false, labour: false, bake: false }, // typed in, so the recipe no longer fills them
   misc: '',
   packs: [], // { packaging_id, qty }
   mode: 'margin', // 'margin' → show price, 'price' → show margin
@@ -1088,17 +1089,17 @@ const calc = {
 
 function resetCalc() {
   Object.assign(calc, {
-    recipeId: '', labour: '', bake: '', timesTouched: { labour: false, bake: false },
+    recipeId: '', servings: '', labour: '', bake: '', touched: { servings: false, labour: false, bake: false },
     misc: '', packs: [], margin: '', marginTouched: false, price: '',
   });
 }
 
-/** Fills labour and bake time from the chosen recipe, except fields the user has typed in. */
-function fillRecipeTimes() {
+/** Fills servings, labour and bake time from the chosen recipe, except fields the user has typed in. */
+function fillRecipeDefaults() {
   const recipe = findRecipe(calc.recipeId);
   if (!recipe) return;
-  for (const [field, key] of [['labour', 'labour_min'], ['bake', 'bake_min']]) {
-    if (!calc.timesTouched[field]) calc[field] = recipe[key] !== undefined ? String(recipe[key]) : '';
+  for (const [field, key] of [['servings', 'yield_units'], ['labour', 'labour_min'], ['bake', 'bake_min']]) {
+    if (!calc.touched[field]) calc[field] = recipe[key] !== undefined ? String(recipe[key]) : '';
   }
 }
 
@@ -1115,6 +1116,12 @@ function computeBatch() {
   };
 
   const ing = ingredientCost(recipe);
+  // Same ingredients, different portion size: a blank field means the recipe's own yield.
+  let servings = recipe.yield_units;
+  if (String(calc.servings).trim()) {
+    servings = parseNum(calc.servings);
+    if (!(servings > 0)) errors.push('servings');
+  }
   const labourMin = read(calc.labour, parseMinutes, 'labour time');
   const bakeMin = read(calc.bake, parseMinutes, 'bake time');
   const misc = read(calc.misc, parseNum, 'misc cost');
@@ -1133,8 +1140,8 @@ function computeBatch() {
   const labour = (labourMin / 60) * s.labour_rate_per_hr;
   const total = ing.total + electricity + labour + packaging + misc;
   return {
-    recipe, ing, labourMin, bakeMin, electricity, labour, packaging, packCount, misc, total,
-    perUnit: total / recipe.yield_units,
+    recipe, ing, servings, labourMin, bakeMin, electricity, labour, packaging, packCount, misc, total,
+    perUnit: total / servings,
     errors,
   };
 }
@@ -1147,7 +1154,7 @@ function renderCalculator(view) {
     return item && !item.deleted;
   });
   if (!calc.marginTouched) calc.margin = String(data.settings.default_margin_pct);
-  fillRecipeTimes();
+  fillRecipeDefaults();
 
   const recipes = [...data.recipes].sort(byName);
   if (!recipes.length) {
@@ -1166,8 +1173,12 @@ function renderCalculator(view) {
     </div>
     <div class="calc-grid">
       <section class="card" aria-label="Batch inputs">
-        <label class="field"><span>Recipe</span>
-          <select data-calc="recipeId"><option value="">Choose a recipe…</option>${options(recipes, calc.recipeId)}</select></label>
+        <div class="field-row">
+          <label class="field grow"><span>Recipe</span>
+            <select data-calc="recipeId"><option value="">Choose a recipe…</option>${options(recipes, calc.recipeId)}</select></label>
+          <label class="field servings-field"><span>Servings</span>
+            <input data-calc="servings" inputmode="decimal" autocomplete="off" value="${esc(calc.servings)}" placeholder="e.g. 12"></label>
+        </div>
         <div class="field-row">
           <label class="field"><span>Labour time</span>
             <div class="amount inset"><input data-calc="labour" inputmode="decimal" autocomplete="off" value="${esc(calc.labour)}" placeholder="e.g. 90"><span class="unit">min</span></div></label>
@@ -1232,6 +1243,7 @@ function updateCalcOutputs() {
     const v = calc[key];
     $(`[data-calc="${key}"]`)?.classList.toggle('invalid', String(v).trim() !== '' && !Number.isFinite(parse(v)));
   };
+  flag('servings', (v) => (parseNum(v) > 0 ? 1 : NaN));
   flag('labour', parseMinutes);
   flag('bake', parseMinutes);
   flag('misc', parseNum);
@@ -1276,7 +1288,7 @@ function updateCalcOutputs() {
 /** The selling price (or margin) box, or a message saying what's missing, plus the profit pair when there is one. */
 function priceOutputHTML(b) {
   const cost = b.perUnit;
-  const units = b.recipe.yield_units;
+  const units = b.servings;
   const message = (html) => ({ result: html, profit: '' });
   if (!Number.isFinite(cost)) return message('<p class="placeholder">Fix the inputs above to see a price.</p>');
 
@@ -1501,7 +1513,7 @@ function onViewInput(e) {
     const key = el.dataset.calc;
     calc[key] = el.value;
     if (key === 'margin') calc.marginTouched = true;
-    if (key in calc.timesTouched) calc.timesTouched[key] = true;
+    if (key in calc.touched) calc.touched[key] = true;
     // A new recipe can bring its own times, so redraw the inputs.
     if (key === 'recipeId') render();
     else updateCalcOutputs();
